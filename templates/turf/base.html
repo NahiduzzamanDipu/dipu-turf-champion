@@ -24,7 +24,17 @@
 {% if messages %}<div class="message-stack">{% for message in messages %}<div class="flash {{ message.tags }}">{{ message }}</div>{% endfor %}</div>{% endif %}
 {% block content %}{% endblock %}
 <footer class="site-footer"><a class="brand footer-brand" href="{% url 'home' %}"><span class="brand-mark">D</span><span class="brand-copy"><strong>{{ profile.name|default:'Dipu Turf Champion' }}</strong><small>Football starts here</small></span></a><span>{{ profile.address }}</span><a href="{% url 'booking_lookup' %}">Manage your booking</a><span>© {% now "Y" %} Dipu Turf Champion</span></footer>
-<nav class="mobile-dock" aria-label="Quick navigation"><a class="dock-active" href="{% url 'home' %}"><span>⌂</span>Home</a><a href="{% url 'book' %}"><span>＋</span>Book</a><a href="{% url 'booking_lookup' %}"><span>▤</span>My booking</a></nav>
+<nav class="mobile-dock" aria-label="Quick navigation">
+  {% if request.user.is_authenticated and request.user.is_staff %}
+    <a class="{% if request.resolver_match.url_name == 'owner_dashboard' %}dock-active{% endif %}" href="{% url 'owner_dashboard' %}"><span>▤</span>Bookings</a>
+    <a class="{% if request.resolver_match.url_name == 'owner_availability' %}dock-active{% endif %}" href="{% url 'owner_availability' %}"><span>◷</span>Schedule</a>
+    <a class="{% if request.resolver_match.url_name == 'owner_settings' %}dock-active{% endif %}" href="{% url 'owner_settings' %}"><span>⚙</span>Settings</a>
+  {% else %}
+    <a class="{% if request.resolver_match.url_name == 'home' %}dock-active{% endif %}" href="{% url 'home' %}"><span>⌂</span>Home</a>
+    <a class="{% if request.resolver_match.url_name == 'book' %}dock-active{% endif %}" href="{% url 'book' %}"><span>＋</span>Book</a>
+    <a class="{% if request.resolver_match.url_name == 'booking_lookup' %}dock-active{% endif %}" href="{% url 'booking_lookup' %}"><span>▤</span>My booking</a>
+  {% endif %}
+</nav>
 {% block scripts %}{% endblock %}
 </body>
 </html>
