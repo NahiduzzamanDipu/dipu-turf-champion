@@ -1,0 +1,47 @@
+{% extends 'turf/base.html' %}
+{% block title %}Availability · Owner workspace{% endblock %}
+{% block body_class %}dashboard-body{% endblock %}
+{% block content %}
+<main class="dashboard-shell">
+  <aside class="dash-sidebar">
+    <a class="brand dash-brand" href="{% url 'owner_dashboard' %}"><span class="brand-mark">D</span><span class="brand-copy"><strong>{{ profile.name }}</strong><small>Owner workspace</small></span></a>
+    <div class="dash-nav-label">Manage</div>
+    <a class="dash-nav" href="{% url 'owner_dashboard' %}">Bookings</a>
+    <a class="dash-nav active" href="{% url 'owner_availability' %}">Availability</a>
+    <a class="dash-nav" href="{% url 'owner_settings' %}">Turf settings</a>
+    <a class="dash-nav" href="{% url 'owner_export' %}">Export bookings</a>
+    <div class="sidebar-spacer"></div>
+    <a class="dash-public" href="{% url 'home' %}">View public page <span>↗</span></a>
+    <form method="post" action="{% url 'owner_logout' %}">{% csrf_token %}<button class="dash-logout" type="submit">Sign out</button></form>
+  </aside>
+  <section class="dash-content">
+    <header class="dash-top"><div><span class="dash-date">Open slots and maintenance</span><h1>Availability</h1></div></header>
+    <div class="availability-layout">
+      <section class="settings-card">
+        <div class="settings-card-head"><div><span class="section-index">NEXT SEVEN DAYS</span><h2>Pitch schedule</h2></div><span>{{ profile.opening_time|time:'g:i A' }} – {{ profile.closing_time|time:'g:i A' }}</span></div>
+        {% for day in days %}
+        <details class="day-row" {% if forloop.first %}open{% endif %}>
+          <summary><span><b>{{ day.date|date:'D, j M' }}</b><small>{{ day.open_count }} open slots</small></span><i>⌄</i></summary>
+          <div class="day-slots">{% for slot in day.slots %}<span class="day-slot {% if not slot.available %}day-slot-taken{% endif %}">{{ slot.start|time:'g:i A' }}</span>{% empty %}<span class="empty-state">No slots scheduled</span>{% endfor %}</div>
+        </details>
+        {% endfor %}
+      </section>
+      <aside class="settings-card block-card">
+        <div class="section-index">MANUAL BLOCK</div><h2>Close a time</h2>
+        <p>Block a slot for maintenance or a private event. Leave both times blank to close the full day.</p>
+        <form method="post">{% csrf_token %}
+          <label class="field-label">Date<input type="date" name="play_date" min="{{ days.0.date|date:'Y-m-d' }}" required></label>
+          <div class="settings-grid"><label class="field-label">From<input type="time" name="start_time"></label><label class="field-label">Until<input type="time" name="end_time"></label></div>
+          <label class="field-label">Reason<input name="reason" maxlength="140" placeholder="Pitch maintenance"></label>
+          <button class="button button-dark button-large" type="submit">Block availability <span>↗</span></button>
+        </form>
+        <div class="block-list"><span class="section-index">UPCOMING BLOCKS</span>
+          {% for block in blocks %}
+          <div class="block-list-item"><span><b>{{ block.play_date|date:'j M' }}</b>{% if block.start_time %} · {{ block.start_time|time:'g:i A' }}–{{ block.end_time|time:'g:i A' }}{% else %} · All day{% endif %}<small>{{ block.reason|default:'Unavailable' }}</small></span><form method="post" action="{% url 'owner_unblock' block.id %}">{% csrf_token %}<button class="remove-block" type="submit" aria-label="Remove availability block">Remove</button></form></div>
+          {% empty %}<small>No manual blocks scheduled</small>{% endfor %}
+        </div>
+      </aside>
+    </div>
+  </section>
+</main>
+{% endblock %}

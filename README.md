@@ -1,59 +1,39 @@
 # Dipu Turf Champion
 
-A branded football turf website with public booking requests, a live availability view, customer booking lookup, and a private owner dashboard.
+A mobile-first turf booking and owner management platform built with Python, Django, and MySQL.
 
-## Features
+## What is included
 
-- English and Bengali public pages for the home, about, turf, pricing, gallery, booking, contact, terms, and privacy sections.
-- Date-based opening hours and slot availability; bookings are protected against duplicate reservations.
-- Owner dashboard for booking status and payment records, manual bookings, customers, notifications, blocked slots, opening hours, site content, pricing, and CSV exports.
-- Owner password hashing, signed secure sessions, login throttling, audit records, and rate limits.
-- PostgreSQL stores bookings, settings, and uploaded gallery images.
+- Public turf page with editable business details and live one-hour slot availability.
+- Player booking requests, booking references, and booking lookup by reference and phone number.
+- Owner workspace for booking status, payment records, payment totals, CSV export, operating hours, rates, and blocked dates or times.
+- Django admin for managing turf settings, customers, bookings, and payment records.
+- Responsive desktop and mobile layouts, including a compact mobile navigation dock.
+- MySQL setup for local development and deployment, with SQLite available when MySQL variables are not configured.
 
 ## Run locally
 
-Requires Node.js 20 or later and npm. Create a PostgreSQL database and configure `.env` using `.env.example` as a guide.
+Use Python 3.12, MySQL 8.4, and a virtual environment. The included Compose file starts a local MySQL database.
 
 ```powershell
-npm.cmd install
-npm.cmd run dev
+Copy-Item .env.example .env
+docker compose up -d db
+py -3.12 -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+python manage.py migrate
+python manage.py createsuperuser
+python manage.py runserver
 ```
 
-The Vite server handles the public UI. To run the complete site including APIs, start the production server after building:
+Set `MYSQL_DATABASE`, `MYSQL_USER`, `MYSQL_PASSWORD`, `MYSQL_HOST`, and `MYSQL_PORT` in `.env`. The Compose defaults are for local development only. Set `DJANGO_SECRET_KEY` to a private random value before deployment. If you want to explore with SQLite, leave `MYSQL_DATABASE` unset.
 
-```powershell
-npm.cmd run build
-npm.cmd start
-```
+Open `http://127.0.0.1:8000/` for the public site, `/owner/` for the owner workspace, and `/django-admin/` for Django admin. Sign in to the owner workspace with a Django staff or superuser account.
 
-On first server start, the app applies the idempotent SQL migrations from `migrations/`.
+## Deploy
 
-## Deploy free on Render
+The repository includes a Dockerfile and Render Blueprint. Configure a reachable MySQL database and provide its connection values as environment variables. Set `DJANGO_ALLOWED_HOSTS` to the deployed host name(s) and `CSRF_TRUSTED_ORIGINS` to the corresponding `https://` origin(s). Keep `DJANGO_DEBUG=False` and a private `DJANGO_SECRET_KEY` in production.
 
-The repository contains a Render Blueprint (`render.yaml`) for a free Node web service. It requires a PostgreSQL URL; use a free external PostgreSQL provider such as Neon. Render's free PostgreSQL database expires after 30 days, so it is not used here.
+Before taking live bookings, sign in to the owner workspace and replace the example address and rates with the turf's real details. Payment entries are recorded by the owner; this project does not initiate or verify bKash, Nagad, card, or bank transfers.
 
-1. Create a PostgreSQL project on Neon and copy its pooled connection string. Ensure SSL is enabled.
-2. Create a private GitHub repository and push this project.
-3. In Render, choose **New → Blueprint**, connect the GitHub repository, and deploy `render.yaml`.
-4. When prompted, enter `DATABASE_URL`, `ADMIN_EMAIL`, and `ADMIN_PASSWORD_HASH`. Create the password hash locally with `node scripts/hash-password.mjs`; use a unique password of at least 12 characters. Render generates `SESSION_SECRET` automatically.
-5. Open the resulting `*.onrender.com` URL. Sign in at `/admin` and set accurate prices, phone/WhatsApp, address, map link, opening hours, photos, policies, and terms before accepting bookings.
-
-Render's free web service spins down after 15 minutes without traffic and can take about a minute to respond after sleeping. Neon free compute also scales to zero after 5 minutes of database inactivity. Free tiers have quotas and provider terms can change; check current limits before relying on the site for time-sensitive bookings. Render describes its free instances as unsuitable for production use. The app stores uploaded images in PostgreSQL, so keep uploads modest and export booking data regularly.
-
-## Important first-run setup
-
-- Rates start at zero, so customers cannot book until the owner sets prices.
-- Replace sample pitch photos with photos the business is allowed to use.
-- Add the real business contact details, location, opening hours, map link, and legal copy.
-- Customer notifications are recorded in the dashboard only; the app does not send SMS or WhatsApp.
-- Payment transfers are not verified automatically. The owner must check each transfer with the payment provider before marking it paid.
-- The dashboard exports CSV; payment gateways, SMS/WhatsApp, and `.xlsx` export are not connected.
-
-## Useful files
-
-- `src/main.tsx` — public site and owner dashboard.
-- `src/style.css` — responsive visual design.
-- `functions/api/[[path]].ts` — booking, availability, sign-in, and dashboard API.
-- `server/index.mjs` — Node/Express host and PostgreSQL compatibility layer.
-- `migrations/` — PostgreSQL schema, automatically applied at service startup.
-- `render.yaml` — Render Blueprint deployment configuration.
+The visual polish pass follows the Unslop design guidance by Damir Sokolovsky, CC BY 4.0.

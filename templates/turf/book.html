@@ -1,0 +1,14 @@
+{% extends 'turf/base.html' %}
+{% block title %}Choose a time · {{ profile.name }}{% endblock %}
+{% block content %}
+<main class="page-shell booking-page">
+  <div class="page-heading"><div><div class="section-index">BOOK YOUR GAME</div><h1>Pick your <em>time</em></h1><p>Choose a day, then select an open one-hour slot.</p></div><a class="back-link" href="{% url 'home' %}">← Back to ground</a></div>
+  <form method="get" class="date-picker"><label for="booking-date">Game day</label><div class="date-control"><input id="booking-date" type="date" name="date" min="{{ min_date }}" value="{{ selected_date|date:'Y-m-d' }}"><button class="button button-dark" type="submit">Show times <span>→</span></button></div></form>
+  <form method="post" class="booking-layout">{% csrf_token %}<input type="hidden" name="play_date" value="{{ selected_date|date:'Y-m-d' }}">
+    <section class="slot-panel"><div class="panel-heading"><div><div class="section-index">AVAILABLE TIMES</div><h2>{{ selected_date|date:'l, j F' }}</h2></div><span class="availability-pill"><i></i> Live availability</span></div><div class="slot-grid">
+      {% for slot in slots %}<label class="slot-option {% if not slot.available %}slot-disabled{% endif %}"><input type="radio" name="start_time" value="{{ slot.start|time:'H:i' }}" {% if not slot.available %}disabled{% endif %} required><span class="slot-time">{{ slot.start|time:'g:i A' }}</span><span class="slot-price">৳{{ slot.price }}</span><span class="slot-state">{% if slot.available %}Available{% else %}Taken{% endif %}</span></label>{% empty %}<div class="empty-state">No one-hour slots fit within the current opening hours.</div>{% endfor %}
+    </div><p class="form-hint">Slots are held once your request is submitted. The turf team will confirm your booking.</p></section>
+    <aside class="booking-card"><div class="section-index">YOUR DETAILS</div><h2>Who’s playing?</h2><label class="field-label">Your name<input name="name" autocomplete="name" maxlength="100" placeholder="e.g. Rafi Ahmed" required></label><label class="field-label">Mobile number<input name="phone" type="tel" inputmode="tel" autocomplete="tel" maxlength="32" placeholder="01XXXXXXXXX" required></label><label class="field-label">Payment method<select name="payment_method"><option value="at_turf">Pay at the turf</option><option value="bkash">bKash / Nagad</option><option value="bank">Bank transfer</option></select></label><label class="field-label">Note for the team <span class="optional">Optional</span><textarea name="notes" rows="3" maxlength="500" placeholder="Anything we should know?"></textarea></label><button class="button button-lime button-large submit-booking" type="submit">Request this slot <span>↗</span></button><p class="privacy-note">Your phone number lets us confirm and find this booking later.</p></aside>
+  </form>
+</main>
+{% endblock %}

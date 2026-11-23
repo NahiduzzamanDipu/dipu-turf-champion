@@ -1,0 +1,30 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#f4f4ee">
+  <meta name="description" content="Reserve your next football game at Dipu Turf Champion. See live availability and request a pitch slot online.">
+  <title>{% block title %}Dipu Turf Champion{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'turf/site.css' %}">
+  {% block head %}{% endblock %}
+</head>
+<body class="{% block body_class %}{% endblock %}">
+<header class="topbar">
+  <a class="brand" href="{% url 'home' %}" aria-label="Dipu Turf Champion home"><span class="brand-mark">D</span><span class="brand-copy"><strong>{{ profile.name|default:'Dipu Turf Champion' }}</strong><small>Your home ground</small></span></a>
+  <nav class="desktop-nav" aria-label="Main navigation">
+    <a href="{% url 'home' %}#ground">The ground</a><a href="{% url 'home' %}#rates">Rates</a><a href="{% url 'booking_lookup' %}">My booking</a>
+  </nav>
+  <div class="top-actions"><a class="owner-link" href="{% url 'owner_login' %}">Owner sign in</a><a class="button button-lime nav-book" href="{% url 'book' %}">Book a slot <span aria-hidden="true">↗</span></a></div>
+</header>
+{% if messages %}<div class="message-stack">{% for message in messages %}<div class="flash {{ message.tags }}">{{ message }}</div>{% endfor %}</div>{% endif %}
+{% block content %}{% endblock %}
+<footer class="site-footer"><a class="brand footer-brand" href="{% url 'home' %}"><span class="brand-mark">D</span><span class="brand-copy"><strong>{{ profile.name|default:'Dipu Turf Champion' }}</strong><small>Football starts here</small></span></a><span>{{ profile.address }}</span><a href="{% url 'booking_lookup' %}">Manage your booking</a><span>© {% now "Y" %} Dipu Turf Champion</span></footer>
+<nav class="mobile-dock" aria-label="Quick navigation"><a class="dock-active" href="{% url 'home' %}"><span>⌂</span>Home</a><a href="{% url 'book' %}"><span>＋</span>Book</a><a href="{% url 'booking_lookup' %}"><span>▤</span>My booking</a></nav>
+{% block scripts %}{% endblock %}
+</body>
+</html>
