@@ -1,0 +1,13 @@
+{
+  "id": "/",
+  "name": "Dipu Turf Champion",
+  "short_name": "Dipu Turf",
+  "description": "Book and manage games at Dipu Turf Champion.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#f5f5ef",
+  "theme_color": "#15251c",
+  "icons": [{ "src": "/static/turf/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
+}

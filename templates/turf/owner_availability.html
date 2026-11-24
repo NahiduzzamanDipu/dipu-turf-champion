@@ -1,47 +1,22 @@
 {% extends 'turf/base.html' %}
-{% block title %}Availability · Owner workspace{% endblock %}
+{% block title %}Schedule · Owner workspace{% endblock %}
 {% block body_class %}dashboard-body{% endblock %}
 {% block content %}
 <main class="dashboard-shell">
-  <aside class="dash-sidebar">
-    <a class="brand dash-brand" href="{% url 'owner_dashboard' %}"><span class="brand-mark">D</span><span class="brand-copy"><strong>{{ profile.name }}</strong><small>Owner workspace</small></span></a>
-    <div class="dash-nav-label">Manage</div>
-    <a class="dash-nav" href="{% url 'owner_dashboard' %}">Bookings</a>
-    <a class="dash-nav active" href="{% url 'owner_availability' %}">Availability</a>
-    <a class="dash-nav" href="{% url 'owner_settings' %}">Turf settings</a>
-    <a class="dash-nav" href="{% url 'owner_export' %}">Export bookings</a>
-    <div class="sidebar-spacer"></div>
-    <a class="dash-public" href="{% url 'home' %}">View public page <span>↗</span></a>
-    <form method="post" action="{% url 'owner_logout' %}">{% csrf_token %}<button class="dash-logout" type="submit">Sign out</button></form>
-  </aside>
+  {% include 'turf/workspace_sidebar.html' %}
   <section class="dash-content">
-    <header class="dash-top"><div><span class="dash-date">Open slots and maintenance</span><h1>Availability</h1></div></header>
-    <div class="availability-layout">
-      <section class="settings-card">
-        <div class="settings-card-head"><div><span class="section-index">NEXT SEVEN DAYS</span><h2>Pitch schedule</h2></div><span>{{ profile.opening_time|time:'g:i A' }} – {{ profile.closing_time|time:'g:i A' }}</span></div>
-        {% for day in days %}
-        <details class="day-row" {% if forloop.first %}open{% endif %}>
-          <summary><span><b>{{ day.date|date:'D, j M' }}</b><small>{{ day.open_count }} open slots</small></span><i>⌄</i></summary>
-          <div class="day-slots">{% for slot in day.slots %}<span class="day-slot {% if not slot.available %}day-slot-taken{% endif %}">{{ slot.start|time:'g:i A' }}</span>{% empty %}<span class="empty-state">No slots scheduled</span>{% endfor %}</div>
-        </details>
-        {% endfor %}
-      </section>
-      <aside class="settings-card block-card">
-        <div class="section-index">MANUAL BLOCK</div><h2>Close a time</h2>
-        <p>Block a slot for maintenance or a private event. Leave both times blank to close the full day.</p>
-        <form method="post">{% csrf_token %}
-          <label class="field-label">Date<input type="date" name="play_date" min="{{ days.0.date|date:'Y-m-d' }}" required></label>
-          <div class="settings-grid"><label class="field-label">From<input type="time" name="start_time"></label><label class="field-label">Until<input type="time" name="end_time"></label></div>
-          <label class="field-label">Reason<input name="reason" maxlength="140" placeholder="Pitch maintenance"></label>
-          <button class="button button-dark button-large" type="submit">Block availability <span>↗</span></button>
-        </form>
-        <div class="block-list"><span class="section-index">UPCOMING BLOCKS</span>
-          {% for block in blocks %}
-          <div class="block-list-item"><span><b>{{ block.play_date|date:'j M' }}</b>{% if block.start_time %} · {{ block.start_time|time:'g:i A' }}–{{ block.end_time|time:'g:i A' }}{% else %} · All day{% endif %}<small>{{ block.reason|default:'Unavailable' }}</small></span><form method="post" action="{% url 'owner_unblock' block.id %}">{% csrf_token %}<button class="remove-block" type="submit" aria-label="Remove availability block">Remove</button></form></div>
-          {% empty %}<small>No manual blocks scheduled</small>{% endfor %}
-        </div>
-      </aside>
-    </div>
+    <header class="dash-top"><div><span class="dash-date">FIELDS, OPEN HOURS AND MAINTENANCE</span><h1>Availability</h1></div></header>
+    <form method="get" class="booking-filters schedule-filter"><select name="field" aria-label="Choose a field">{% for field in fields %}<option value="{{ field.id }}" {% if selected_field.id == field.id %}selected{% endif %}>{{ field.name }}</option>{% endfor %}</select><input type="date" name="date" value="{{ selected_date|date:'Y-m-d' }}"><button class="button button-dark" type="submit">Show schedule</button></form>
+    <section class="schedule-days">
+      {% for day in days %}<article class="settings-card schedule-day-card"><header class="schedule-day-head"><div><span class="section-index">{{ day.date|date:'l' }}</span><h2>{{ day.date|date:'j F' }}</h2></div><span class="availability-pill"><i></i>{{ day.open_count }} open slots</span></header>
+        <div class="schedule-slot-grid">{% for slot in day.slots %}<div class="schedule-slot {% if not slot.available %}schedule-slot-busy{% endif %}"><strong>{{ slot.start|time:'g:i A' }}</strong>{% if slot.booking %}<span>{{ slot.booking.team_name|default:slot.booking.customer.name }}</span><small>{{ slot.booking.get_status_display }}</small><a href="tel:{{ slot.booking.customer.phone }}">Call player</a>{% else %}<span>৳{{ slot.price }} · {{ slot.end|time:'g:i A' }}</span>{% if slot.available %}<a href="{% url 'owner_manual_booking' %}?field={{ selected_field.id }}&date={{ day.date|date:'Y-m-d' }}&time={{ slot.start_at }}">Book this time</a>{% else %}<small>Unavailable</small>{% endif %}{% endif %}</div>{% empty %}<p class="empty-state">The turf is closed on this date.</p>{% endfor %}</div>
+      </article>{% endfor %}
+    </section>
+    <section class="availability-layout availability-tools">
+      <aside class="settings-card block-card"><div class="section-index">MAINTENANCE</div><h2>Block a field</h2><p>Hold time for maintenance or a private event. Leave both times blank to block the full day.</p><form method="post">{% csrf_token %}<input type="hidden" name="field" value="{{ selected_field.id }}"><label class="field-label">Date<input type="date" name="play_date" min="{{ selected_date|date:'Y-m-d' }}" required></label><div class="settings-grid"><label class="field-label">From<input type="time" name="start_time"></label><label class="field-label">Until<input type="time" name="end_time"></label></div><label class="field-label">Reason<input name="reason" maxlength="140" placeholder="Pitch maintenance"></label><button class="button button-dark button-large" type="submit">Block availability <span>↗</span></button></form></aside>
+      <aside class="settings-card block-card"><div class="section-index">SPECIAL CLOSURE</div><h2>Close the whole turf</h2><p>Use for a public holiday or a full-day event.</p><form method="post">{% csrf_token %}<label class="field-label">Date<input type="date" name="closure_date" min="{{ selected_date|date:'Y-m-d' }}" required></label><label class="field-label">Reason<input name="closure_title" maxlength="120" placeholder="Holiday or event"></label><button class="button button-outline button-large" type="submit">Add closure</button></form></aside>
+    </section>
+    <section class="settings-card block-list-card"><div class="settings-card-head"><div><span class="section-index">UPCOMING HOLDS</span><h2>Maintenance and closures</h2></div></div><div class="hold-list">{% for block in blocks %}<div class="block-list-item"><span><b>{{ block.play_date|date:'j M' }}</b>{% if block.start_time %} · {{ block.start_time|time:'g:i A' }}–{{ block.end_time|time:'g:i A' }}{% else %} · All day{% endif %} · {{ block.field|default:'All fields' }}<small>{{ block.reason|default:'Unavailable' }}</small></span><form method="post" action="{% url 'owner_unblock' block.id %}">{% csrf_token %}<button class="remove-block" type="submit">Remove</button></form></div>{% endfor %}{% for closure in closures %}<div class="block-list-item"><span><b>{{ closure.play_date|date:'j M' }}</b> · Full turf<small>{{ closure.title|default:'Special closure' }}</small></span><form method="post" action="{% url 'owner_remove_closure' closure.id %}">{% csrf_token %}<button class="remove-block" type="submit">Reopen</button></form></div>{% empty %}{% if not blocks %}<span class="empty-state">No future blocks set</span>{% endif %}{% endfor %}</div></section>
   </section>
 </main>
 {% endblock %}

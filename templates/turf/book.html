@@ -1,14 +1,40 @@
 {% extends 'turf/base.html' %}
-{% block title %}Choose a time · {{ profile.name }}{% endblock %}
+{% block title %}Book a field · {{ profile.name }}{% endblock %}
 {% block content %}
 <main class="page-shell booking-page">
-  <div class="page-heading"><div><div class="section-index">BOOK YOUR GAME</div><h1>Pick your <em>time</em></h1><p>Choose a day, then select an open one-hour slot.</p></div><a class="back-link" href="{% url 'home' %}">← Back to ground</a></div>
-  <form method="get" class="date-picker"><label for="booking-date">Game day</label><div class="date-control"><input id="booking-date" type="date" name="date" min="{{ min_date }}" value="{{ selected_date|date:'Y-m-d' }}"><button class="button button-dark" type="submit">Show times <span>→</span></button></div></form>
-  <form method="post" class="booking-layout">{% csrf_token %}<input type="hidden" name="play_date" value="{{ selected_date|date:'Y-m-d' }}">
-    <section class="slot-panel"><div class="panel-heading"><div><div class="section-index">AVAILABLE TIMES</div><h2>{{ selected_date|date:'l, j F' }}</h2></div><span class="availability-pill"><i></i> Live availability</span></div><div class="slot-grid">
-      {% for slot in slots %}<label class="slot-option {% if not slot.available %}slot-disabled{% endif %}"><input type="radio" name="start_time" value="{{ slot.start|time:'H:i' }}" {% if not slot.available %}disabled{% endif %} required><span class="slot-time">{{ slot.start|time:'g:i A' }}</span><span class="slot-price">৳{{ slot.price }}</span><span class="slot-state">{% if slot.available %}Available{% else %}Taken{% endif %}</span></label>{% empty %}<div class="empty-state">No one-hour slots fit within the current opening hours.</div>{% endfor %}
-    </div><p class="form-hint">Slots are held once your request is submitted. The turf team will confirm your booking.</p></section>
-    <aside class="booking-card"><div class="section-index">YOUR DETAILS</div><h2>Who’s playing?</h2><label class="field-label">Your name<input name="name" autocomplete="name" maxlength="100" placeholder="e.g. Rafi Ahmed" required></label><label class="field-label">Mobile number<input name="phone" type="tel" inputmode="tel" autocomplete="tel" maxlength="32" placeholder="01XXXXXXXXX" required></label><label class="field-label">Payment method<select name="payment_method"><option value="at_turf">Pay at the turf</option><option value="bkash">bKash / Nagad</option><option value="bank">Bank transfer</option></select></label><label class="field-label">Note for the team <span class="optional">Optional</span><textarea name="notes" rows="3" maxlength="500" placeholder="Anything we should know?"></textarea></label><button class="button button-lime button-large submit-booking" type="submit">Request this slot <span>↗</span></button><p class="privacy-note">Your phone number lets us confirm and find this booking later.</p></aside>
+  <div class="page-heading"><div><div class="section-index">BOOK YOUR GAME</div><h1>Pick your <em>time</em></h1><p>Choose a field, a day, and a continuous run of open slots.</p></div><a class="back-link" href="{% url 'home' %}">← Back to ground</a></div>
+  <form method="get" class="date-picker"><label for="booking-date">Game details</label><div class="date-control"><select name="field" aria-label="Choose a field">{% for field in fields %}<option value="{{ field.id }}" {% if selected_field.id == field.id %}selected{% endif %}>{{ field.name }} · {{ field.size|default:'Football' }}</option>{% endfor %}</select><input id="booking-date" type="date" name="date" min="{{ min_date }}" value="{{ selected_date|date:'Y-m-d' }}"><button class="button button-dark" type="submit">Show times <span>→</span></button></div></form>
+  {% if profile.public_booking_enabled %}
+  <form method="post" class="booking-layout">{% csrf_token %}<input type="hidden" name="field" value="{{ selected_field.id }}">
+    <section class="slot-panel"><div class="panel-heading"><div><div class="section-index">{{ selected_field.name|default:'AVAILABLE TIMES' }}</div><h2>{{ selected_date|date:'l, j F' }}</h2></div><span class="availability-pill"><i></i> Live availability</span></div><div class="slot-grid">
+      {% for slot in slots %}<label class="slot-option {% if not slot.available %}slot-disabled{% endif %}" data-slot-start="{{ slot.start_at }}" data-slot-end="{{ slot.end_at }}" data-slot-price="{{ slot.price }}" data-slot-open="{% if slot.available %}1{% else %}0{% endif %}"><input type="radio" name="start_at" value="{{ slot.start_at }}" {% if not slot.available %}disabled{% endif %} required><span class="slot-time">{{ slot.start|time:'g:i A' }}</span>{% if slot.date != selected_date %}<span class="slot-day">{{ slot.date|date:'D, j M' }}</span>{% endif %}<span class="slot-price">৳{{ slot.price }}</span><span class="slot-state">{% if slot.available %}Open · {{ selected_field.slot_granularity_minutes }} min{% else %}{% if slot.booking %}{{ slot.booking.team_name|default:slot.booking.customer.name }}{% else %}Held{% endif %}{% endif %}</span></label>{% empty %}<div class="empty-state">This field is closed or has no slots on this date.</div>{% endfor %}
+    </div><div class="quote-summary"><span>Estimated total</span><strong id="booking-estimate">Choose a time</strong><small>Final amount is confirmed with your request</small></div><p class="form-hint">You can request multiple continuous slots, including late-night games that finish after midnight.</p></section>
+    <aside class="booking-card"><div class="section-index">YOUR DETAILS</div><h2>Who’s playing?</h2><label class="field-label">Booking length<select name="slot_count" id="slot-count">{% for count in slot_count_options %}<option value="{{ count }}" {% if count == min_slot_count %}selected{% endif %}>{{ count }} slots · {{ count|add:0 }} × {{ selected_field.slot_granularity_minutes }} min</option>{% endfor %}</select></label><label class="field-label">Team name <span class="optional">Optional</span><input name="team_name" maxlength="120" placeholder="e.g. Friday Night FC"></label><div class="settings-grid"><label class="field-label">Players<input name="players" type="number" min="1" max="50" value="10"></label><label class="field-label">Your name<input name="name" autocomplete="name" maxlength="100" placeholder="Your name" required></label></div><label class="field-label">Mobile number<input name="phone" type="tel" inputmode="tel" autocomplete="tel" maxlength="32" placeholder="01XXXXXXXXX" required></label><label class="field-label">Payment method<select name="payment_method">{% for value,label in payment_methods %}<option value="{{ value }}">{{ label }}</option>{% endfor %}</select></label><div class="payment-instructions"><b>Advance payment</b><small>{{ profile.payment_details|default:'Choose pay at the turf or transfer using the turf’s payment details after your request.' }}</small><small>{{ profile.advance_percent }}% suggested advance · the owner verifies transfer references manually</small></div><label class="field-label">Transfer reference <span class="optional">If you have already paid</span><input name="transaction_reference" maxlength="100" placeholder="bKash / Nagad TrxID"></label><label class="field-label">Note for the team <span class="optional">Optional</span><textarea name="notes" rows="3" maxlength="500" placeholder="Anything we should know?"></textarea></label><button class="button button-lime button-large submit-booking" type="submit">Request this game <span>↗</span></button><p class="privacy-note">No player account needed. Keep your reference and mobile number to look up this request.</p></aside>
   </form>
+  {% else %}<section class="settings-card booking-paused"><h2>Online booking is paused</h2><p>Call the turf to ask about open times.</p>{% if profile.phone %}<a class="button button-dark" href="tel:{{ profile.phone }}">Call {{ profile.phone }}</a>{% endif %}</section>{% endif %}
 </main>
 {% endblock %}
+{% block scripts %}<script>
+(() => {
+  const estimate = document.getElementById('booking-estimate');
+  const count = document.getElementById('slot-count');
+  if (!estimate || !count) return;
+  const slots = [...document.querySelectorAll('.slot-option')];
+  const minutes = Number('{{ selected_field.slot_granularity_minutes|default:60 }}');
+  const update = () => {
+    const selected = document.querySelector('input[name="start_at"]:checked');
+    if (!selected) { estimate.textContent = 'Choose a time'; return; }
+    const index = slots.findIndex((slot) => slot.querySelector('input') === selected);
+    const needed = Number(count.value);
+    let total = 0;
+    for (let i = 0; i < needed; i++) {
+      const slot = slots[index + i];
+      if (!slot || slot.dataset.slotOpen !== '1' || (i && slots[index+i-1].dataset.slotEnd !== slot.dataset.slotStart)) { estimate.textContent = 'Choose consecutive open times'; return; }
+      total += Number(slot.dataset.slotPrice);
+    }
+    estimate.textContent = `৳${total.toLocaleString('en-BD')} · ${needed * minutes} min`;
+  };
+  document.querySelectorAll('input[name="start_at"]').forEach((input) => input.addEventListener('change', update));
+  count.addEventListener('change', update);
+})();
+</script>{% endblock %}

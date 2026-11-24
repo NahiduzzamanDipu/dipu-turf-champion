@@ -1,94 +1,131 @@
-import csv
 from datetime import date, datetime, timedelta
-from io import StringIO
 
 from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
-from django.contrib.auth.decorators import login_required
-from django.core.exceptions import ValidationError
+from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.db import transaction
-from django.db.models import Count, Sum
-from django.http import HttpResponse
-from django.shortcuts import get_object_or_404, redirect, render
+from django.shortcuts import redirect, render
 from django.utils import timezone
 
-from .models import BlockedSlot, Booking, Customer, PaymentRecord, TurfProfile, build_slots, validate_booking_slot
+from .models import (
+    Booking, BookingQRCode, Customer, GalleryPhoto, OperatingHours, SpecialClosure,
+    TurfField, TurfProfile, build_slots, validate_booking_slot,
+)
 
 
 def home(request):
     profile = TurfProfile.current()
     selected_date = timezone.localdate() + timedelta(days=1)
-    slots = build_slots(profile, selected_date)
-    return render(request, "turf/home.html", {"profile": profile, "featured_slots": [s for s in slots if s["available"]][:4]})
+    field_obj = TurfField.objects.filter(is_active=True).first()
+    slots = [slot for slot in build_slots(profile, selected_date, field_obj) if slot["date"] == selected_date]
+    return render(request, "turf/home.html", {
+        "profile": profile,
+        "featured_slots": [s for s in slots if s["available"] and s["date"] == selected_date][:4],
+        "fields": TurfField.objects.filter(is_active=True),
+        "photos": GalleryPhoto.objects.filter(is_visible=True)[:12],
+        "hours": OperatingHours.objects.all(),
+    })
 
 
 def book(request):
     profile = TurfProfile.current()
+    fields = TurfField.objects.filter(is_active=True)
+    selected_field = fields.filter(pk=request.GET.get("field", request.POST.get("field", ""))).first() or fields.first()
     default_date = timezone.localdate() + timedelta(days=1)
     try:
         selected_date = date.fromisoformat(request.GET.get("date", "")) if request.GET.get("date") else default_date
     except ValueError:
         selected_date = default_date
     selected_date = max(selected_date, timezone.localdate())
-    slots = build_slots(profile, selected_date)
+    slots = build_slots(profile, selected_date, selected_field)
     if request.method == "POST":
         try:
-            play_date = date.fromisoformat(request.POST.get("play_date", ""))
+            if not profile.public_booking_enabled:
+                raise ValidationError("Online booking is paused. Please contact the turf team.")
+            selected_start = datetime.fromisoformat(request.POST.get("start_at", ""))
+            play_date = selected_start.date()
             if play_date < timezone.localdate():
                 raise ValidationError("Choose today or a future date for your game.")
-            start = datetime.strptime(request.POST.get("start_time", ""), "%H:%M").time()
+            selected_field = TurfField.objects.get(pk=request.POST.get("field"), is_active=True)
+            start = selected_start.time()
+            slot_count = int(request.POST.get("slot_count", "1"))
             name = request.POST.get("name", "").strip()[:100]
             phone = request.POST.get("phone", "").strip()[:32]
-            method = request.POST.get("payment_method", Booking.PaymentMethod.TURF)
+            team_name = request.POST.get("team_name", "").strip()[:120]
+            payment_method = request.POST.get("payment_method", Booking.PaymentMethod.TURF)
+            transaction_ref = request.POST.get("transaction_reference", "").strip()[:100]
+            players = int(request.POST.get("players", "0") or 0)
             if not name or len(phone) < 7:
                 raise ValidationError("Add your name and a valid mobile number.")
-            if method not in Booking.PaymentMethod.values:
+            if payment_method not in Booking.PaymentMethod.values:
                 raise ValidationError("Choose a payment method.")
+            if players < 0 or players > 50:
+                raise ValidationError("Player count must be between 0 and 50.")
+            if transaction_ref and payment_method == Booking.PaymentMethod.TURF:
+                raise ValidationError("Select the transfer method used for this reference.")
             with transaction.atomic():
                 profile = TurfProfile.objects.select_for_update().get(pk=1)
-                slot = validate_booking_slot(profile, play_date, start)
+                quote = validate_booking_slot(profile, play_date, start, slot_count, selected_field)
                 customer, _ = Customer.objects.get_or_create(phone=phone, defaults={"name": name})
                 if customer.name != name:
                     customer.name = name
-                    customer.save(update_fields=["name"])
-                advance = round(slot["price"] * profile.advance_percent / 100)
+                    customer.save(update_fields=["name", "updated_at"])
+                advance = round(quote["price"] * profile.advance_percent / 100)
                 booking = Booking.objects.create(
-                    customer=customer, play_date=play_date, start_time=start, end_time=slot["end"],
-                    total_amount=slot["price"], advance_amount=advance, payment_method=method,
-                    notes=request.POST.get("notes", "").strip()[:500],
+                    customer=customer, field=selected_field, play_date=play_date,
+                    start_time=quote["start"].time(), end_time=quote["end"].time(),
+                    end_day_offset=(quote["end"].date() - play_date).days,
+                    duration_minutes=quote["duration_minutes"], team_name=team_name,
+                    players=players, total_amount=quote["price"],
+                    advance_amount=advance, payment_method=payment_method,
+                    transaction_reference=transaction_ref,
+                    payment_status=Booking.PaymentStatus.PENDING_VERIFICATION if transaction_ref else Booking.PaymentStatus.UNPAID,
+                    notes=request.POST.get("notes", "").strip()[:500], price_snapshot=quote["price_snapshot"],
                 )
+                if transaction_ref:
+                    from .models import PaymentRecord
+                    PaymentRecord.objects.create(
+                        booking=booking, amount=advance, kind=PaymentRecord.Kind.ADVANCE,
+                        method=payment_method, transaction_reference=transaction_ref,
+                        is_verified=False, note="Player submitted transaction reference for owner verification.",
+                    )
             return render(request, "turf/booking_success.html", {"profile": profile, "booking": booking})
-        except (ValueError, ValidationError, TurfProfile.DoesNotExist) as exc:
-            messages.error(request, exc.messages[0] if isinstance(exc, ValidationError) else "Choose a valid date and time.")
+        except (ValueError, ValidationError, TurfField.DoesNotExist, TurfProfile.DoesNotExist) as exc:
+            messages.error(request, exc.messages[0] if isinstance(exc, ValidationError) else "Choose a valid date, field and time.")
             selected_date = timezone.localdate() + timedelta(days=1)
-            slots = build_slots(profile, selected_date)
-    return render(request, "turf/book.html", {"profile": profile, "selected_date": selected_date, "slots": slots, "min_date": timezone.localdate().isoformat()})
+            slots = build_slots(profile, selected_date, selected_field)
+    return render(request, "turf/book.html", {
+        "profile": profile, "fields": fields, "selected_field": selected_field,
+        "selected_date": selected_date, "slots": slots,
+        "min_date": timezone.localdate().isoformat(),
+        "payment_methods": Booking.PaymentMethod.choices,
+        "min_slot_count": max(1, (selected_field.minimum_minutes + selected_field.slot_granularity_minutes - 1) // selected_field.slot_granularity_minutes) if selected_field else 1,
+        "slot_count_options": range(max(1, (selected_field.minimum_minutes + selected_field.slot_granularity_minutes - 1) // selected_field.slot_granularity_minutes), 17) if selected_field else range(1, 17),
+    })
 
 
 def booking_lookup(request):
     profile = TurfProfile.current()
     booking = None
-    searched = False
     if request.method == "POST":
-        searched = True
         booking = Booking.objects.filter(
             reference__iexact=request.POST.get("reference", "").strip(),
             customer__phone=request.POST.get("phone", "").strip(),
-        ).select_related("customer").first()
+        ).select_related("customer", "field").first()
         if not booking:
             messages.error(request, "We could not find a booking with those details.")
-    return render(request, "turf/lookup.html", {"profile": profile, "booking": booking, "searched": searched})
+    return render(request, "turf/lookup.html", {"profile": profile, "booking": booking})
 
 
 def owner_login(request):
-    if request.user.is_authenticated and request.user.is_staff:
+    if request.user.is_authenticated and _is_workspace_user(request.user):
         return redirect("owner_dashboard")
     if request.method == "POST":
         user = authenticate(request, username=request.POST.get("username", ""), password=request.POST.get("password", ""))
-        if user and user.is_staff:
+        if user and _is_workspace_user(user):
             login(request, user)
             return redirect("owner_dashboard")
-        messages.error(request, "Those sign-in details did not match an owner account.")
+        messages.error(request, "Those sign-in details did not match an owner or manager account.")
     return render(request, "turf/owner_login.html", {"profile": TurfProfile.current()})
 
 
@@ -98,138 +135,18 @@ def owner_logout(request):
     return redirect("home")
 
 
-@login_required
-def owner_dashboard(request):
-    if not request.user.is_staff:
-        return redirect("owner_login")
-    today = timezone.localdate()
-    month_start = today.replace(day=1)
-    bookings = Booking.objects.select_related("customer").prefetch_related("payments").all()
-    query = request.GET.get("q", "").strip()
-    status = request.GET.get("status", "")
-    if query:
-        from django.db.models import Q
-        bookings = bookings.filter(Q(reference__icontains=query) | Q(customer__name__icontains=query) | Q(customer__phone__icontains=query))
-    if status in Booking.Status.values:
-        bookings = bookings.filter(status=status)
-    totals = Booking.objects.filter(play_date=today).aggregate(count=Count("id", distinct=True), revenue=Sum("payments__amount"))
-    month_revenue = PaymentRecord.objects.filter(received_at__date__gte=month_start, received_at__date__lte=today).aggregate(total=Sum("amount"))["total"] or 0
-    context = {
-        "profile": TurfProfile.current(), "bookings": bookings.order_by("-created_at")[:60], "query": query,
-        "selected_status": status, "today_count": totals["count"] or 0, "today_revenue": totals["revenue"] or 0,
-        "month_revenue": month_revenue, "pending_count": Booking.objects.filter(status=Booking.Status.PENDING).count(),
-        "customer_count": Customer.objects.count(), "today": today, "booking_statuses": Booking.Status.choices,
-    }
-    return render(request, "turf/owner_dashboard.html", context)
+def _is_workspace_user(user):
+    if user.is_staff or user.is_superuser:
+        return True
+    try:
+        return user.turf_workspace_membership.is_active
+    except ObjectDoesNotExist:
+        return False
 
 
-@login_required
-def booking_action(request, reference):
-    if not request.user.is_staff:
-        return redirect("owner_login")
-    if request.method == "POST":
-        booking = get_object_or_404(Booking, reference=reference)
-        action = request.POST.get("action")
-        if action in Booking.Status.values:
-            booking.status = action
-            booking.save(update_fields=["status", "updated_at"])
-            messages.success(request, f"Booking {booking.reference} marked {booking.get_status_display().lower()}.")
-        elif action == "record_payment":
-            try:
-                amount = int(request.POST.get("amount", "0"))
-                tx_ref = request.POST.get("transaction_reference", "").strip()[:100]
-                if amount <= 0:
-                    raise ValueError
-                PaymentRecord.objects.create(booking=booking, amount=amount, method=request.POST.get("method", "cash"), transaction_reference=tx_ref, received_by=request.user)
-                received = booking.payments.aggregate(total=Sum("amount"))["total"] or 0
-                booking.payment_status = Booking.PaymentStatus.PAID if received >= booking.total_amount else Booking.PaymentStatus.PARTIAL
-                booking.transaction_reference = tx_ref
-                booking.save(update_fields=["payment_status", "transaction_reference", "updated_at"])
-                messages.success(request, f"Payment of ৳{amount:,} recorded for {booking.reference}.")
-            except ValueError:
-                messages.error(request, "Enter a payment amount greater than zero.")
-    return redirect("owner_dashboard")
-
-
-@login_required
-def owner_settings(request):
-    if not request.user.is_staff:
-        return redirect("owner_login")
-    profile = TurfProfile.current()
-    if request.method == "POST":
-        try:
-            opening = datetime.strptime(request.POST.get("opening_time", ""), "%H:%M").time()
-            closing = datetime.strptime(request.POST.get("closing_time", ""), "%H:%M").time()
-            weekday = int(request.POST.get("weekday_rate", "0"))
-            weekend = int(request.POST.get("weekend_rate", "0"))
-            advance = int(request.POST.get("advance_percent", "30"))
-            if opening >= closing or min(weekday, weekend) < 0 or not 0 <= advance <= 100:
-                raise ValueError
-            profile.name = request.POST.get("name", "").strip()[:120] or profile.name
-            profile.tagline = request.POST.get("tagline", "").strip()[:180]
-            profile.address = request.POST.get("address", "").strip()[:240]
-            profile.phone = request.POST.get("phone", "").strip()[:32]
-            profile.whatsapp = request.POST.get("whatsapp", "").strip()[:32]
-            profile.email = request.POST.get("email", "").strip()[:254]
-            profile.maps_url = request.POST.get("maps_url", "").strip()
-            profile.opening_time, profile.closing_time = opening, closing
-            profile.weekday_rate, profile.weekend_rate, profile.advance_percent = weekday, weekend, advance
-            profile.save()
-            messages.success(request, "Turf settings saved.")
-            return redirect("owner_settings")
-        except ValueError:
-            messages.error(request, "Check the hours, rates and deposit percentage, then try again.")
-    return render(request, "turf/owner_settings.html", {"profile": profile})
-
-
-@login_required
-def owner_availability(request):
-    if not request.user.is_staff:
-        return redirect("owner_login")
-    profile = TurfProfile.current()
-    if request.method == "POST":
-        try:
-            block_date = date.fromisoformat(request.POST.get("play_date", ""))
-            start_value, end_value = request.POST.get("start_time", ""), request.POST.get("end_time", "")
-            start = datetime.strptime(start_value, "%H:%M").time() if start_value else None
-            end = datetime.strptime(end_value, "%H:%M").time() if end_value else None
-            if bool(start) != bool(end) or (start and start >= end):
-                raise ValueError
-            BlockedSlot.objects.create(play_date=block_date, start_time=start, end_time=end, reason=request.POST.get("reason", "").strip()[:140], created_by=request.user)
-            messages.success(request, "Availability block added.")
-            return redirect("owner_availability")
-        except ValueError:
-            messages.error(request, "Enter a valid date and both times, or leave both times blank for a full-day block.")
-    today = timezone.localdate()
-    days = []
-    for offset in range(7):
-        day = today + timedelta(days=offset)
-        slots = build_slots(profile, day)
-        days.append({"date": day, "slots": slots, "open_count": sum(slot["available"] for slot in slots)})
-    return render(request, "turf/owner_availability.html", {"profile": profile, "days": days, "blocks": BlockedSlot.objects.filter(play_date__gte=today).order_by("play_date", "start_time")})
-
-
-@login_required
-def owner_unblock(request, block_id):
-    if not request.user.is_staff:
-        return redirect("owner_login")
-    if request.method == "POST":
-        block = get_object_or_404(BlockedSlot, pk=block_id)
-        block.delete()
-        messages.success(request, "Availability block removed.")
-    return redirect("owner_availability")
-
-
-@login_required
-def owner_export(request):
-    if not request.user.is_staff:
-        return redirect("owner_login")
-    output = StringIO()
-    writer = csv.writer(output)
-    writer.writerow(["Reference", "Date", "Start", "End", "Customer", "Phone", "Total BDT", "Paid BDT", "Booking status", "Payment status"])
-    for booking in Booking.objects.select_related("customer").all():
-        paid = booking.payments.aggregate(total=Sum("amount"))["total"] or 0
-        writer.writerow([booking.reference, booking.play_date, booking.start_time, booking.end_time, booking.customer.name, booking.customer.phone, booking.total_amount, paid, booking.status, booking.payment_status])
-    response = HttpResponse(output.getvalue(), content_type="text/csv; charset=utf-8")
-    response["Content-Disposition"] = "attachment; filename=dipu-turf-bookings.csv"
-    return response
+def public_qr(request, token):
+    qr = BookingQRCode.objects.filter(token=token, is_active=True).first()
+    if not qr:
+        from django.http import HttpResponseGone
+        return HttpResponseGone("This turf booking QR code has been retired.")
+    return redirect("book")

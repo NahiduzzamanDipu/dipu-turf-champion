@@ -1,0 +1,4 @@
+{% extends 'turf/base.html' %}
+{% block title %}Activity log · Owner workspace{% endblock %}
+{% block body_class %}dashboard-body{% endblock %}
+{% block content %}<main class="dashboard-shell">{% include 'turf/workspace_sidebar.html' %}<section class="dash-content"><header class="dash-top"><div><span class="dash-date">A RECORD OF CHANGES IN YOUR WORKSPACE</span><h1>Activity log</h1></div></header><section class="settings-card"><div class="activity-list">{% for event in events %}<article><span class="activity-dot"></span><div><strong>{{ event.summary }}</strong><small>{{ event.actor|default:'Player' }} · {{ event.created_at|date:'j M Y, g:i A' }}{% if event.ip_address %} · {{ event.ip_address }}{% endif %}</small></div><span class="activity-type">{{ event.action|cut:'_' }}</span></article>{% empty %}<p class="empty-state">Actions will appear here as bookings, payments and settings change.</p>{% endfor %}</div></section></section></main>{% endblock %}

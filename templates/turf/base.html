@@ -4,31 +4,40 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#f4f4ee">
+  <meta name="theme-color" content="{{ profile.theme_color|default:'#15251c' }}">
   <meta name="description" content="Reserve your next football game at Dipu Turf Champion. See live availability and request a pitch slot online.">
+  <link rel="manifest" href="{% static 'turf/manifest.webmanifest' %}">
+  <link rel="icon" href="{% static 'turf/icon.svg' %}" type="image/svg+xml">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <title>{% block title %}Dipu Turf Champion{% endblock %}</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{% static 'turf/site.css' %}">
+  <link rel="stylesheet" href="{% static 'turf/workspace.css' %}">
   {% block head %}{% endblock %}
 </head>
 <body class="{% block body_class %}{% endblock %}">
 <header class="topbar">
-  <a class="brand" href="{% url 'home' %}" aria-label="Dipu Turf Champion home"><span class="brand-mark">D</span><span class="brand-copy"><strong>{{ profile.name|default:'Dipu Turf Champion' }}</strong><small>Your home ground</small></span></a>
-  <nav class="desktop-nav" aria-label="Main navigation">
-    <a href="{% url 'home' %}#ground">The ground</a><a href="{% url 'home' %}#rates">Rates</a><a href="{% url 'booking_lookup' %}">My booking</a>
-  </nav>
+  <a class="brand" href="{% url 'home' %}" aria-label="Dipu Turf Champion home"><span class="brand-mark">{% if profile.profile_picture %}<img src="{{ profile.profile_picture.url }}" alt="">{% else %}D{% endif %}</span><span class="brand-copy"><strong>{{ profile.name|default:'Dipu Turf Champion' }}</strong><small>Your home ground</small></span></a>
+  {% if request.workspace_member or request.user.is_staff or request.user.is_superuser %}
+  <nav class="desktop-nav" aria-label="Workspace navigation"><a href="{% url 'owner_dashboard' %}">Workspace</a><a href="{% url 'owner_reports' %}">Reports</a><a href="{% url 'owner_account' %}">My account</a></nav>
+  <div class="top-actions"><a class="owner-link" href="{% url 'home' %}">Public page</a><a class="button button-lime nav-book" href="{% url 'owner_manual_booking' %}">Add a booking <span aria-hidden="true">↗</span></a></div>
+  {% else %}
+  <nav class="desktop-nav" aria-label="Main navigation"><a href="{% url 'home' %}#ground">The ground</a><a href="{% url 'home' %}#rates">Rates</a><a href="{% url 'home' %}#gallery">Gallery</a><a href="{% url 'booking_lookup' %}">My booking</a></nav>
   <div class="top-actions"><a class="owner-link" href="{% url 'owner_login' %}">Owner sign in</a><a class="button button-lime nav-book" href="{% url 'book' %}">Book a slot <span aria-hidden="true">↗</span></a></div>
+  {% endif %}
 </header>
 {% if messages %}<div class="message-stack">{% for message in messages %}<div class="flash {{ message.tags }}">{{ message }}</div>{% endfor %}</div>{% endif %}
 {% block content %}{% endblock %}
-<footer class="site-footer"><a class="brand footer-brand" href="{% url 'home' %}"><span class="brand-mark">D</span><span class="brand-copy"><strong>{{ profile.name|default:'Dipu Turf Champion' }}</strong><small>Football starts here</small></span></a><span>{{ profile.address }}</span><a href="{% url 'booking_lookup' %}">Manage your booking</a><span>© {% now "Y" %} Dipu Turf Champion</span></footer>
+<footer class="site-footer"><a class="brand footer-brand" href="{% url 'home' %}"><span class="brand-mark">{% if profile.profile_picture %}<img src="{{ profile.profile_picture.url }}" alt="">{% else %}D{% endif %}</span><span class="brand-copy"><strong>{{ profile.name|default:'Dipu Turf Champion' }}</strong><small>Football starts here</small></span></a><span>{{ profile.address }}</span><a href="{% url 'booking_lookup' %}">Manage your booking</a><span>© {% now "Y" %} Dipu Turf Champion</span></footer>
 <nav class="mobile-dock" aria-label="Quick navigation">
-  {% if request.user.is_authenticated and request.user.is_staff %}
+  {% if request.workspace_member or request.user.is_staff or request.user.is_superuser %}
     <a class="{% if request.resolver_match.url_name == 'owner_dashboard' %}dock-active{% endif %}" href="{% url 'owner_dashboard' %}"><span>▤</span>Bookings</a>
     <a class="{% if request.resolver_match.url_name == 'owner_availability' %}dock-active{% endif %}" href="{% url 'owner_availability' %}"><span>◷</span>Schedule</a>
-    <a class="{% if request.resolver_match.url_name == 'owner_settings' %}dock-active{% endif %}" href="{% url 'owner_settings' %}"><span>⚙</span>Settings</a>
+    <a class="{% if request.resolver_match.url_name == 'owner_reports' %}dock-active{% endif %}" href="{% url 'owner_reports' %}"><span>↗</span>Reports</a>
+    <a class="{% if request.resolver_match.url_name == 'owner_settings' %}dock-active{% endif %}" href="{% url 'owner_settings' %}"><span>•••</span>More</a>
   {% else %}
     <a class="{% if request.resolver_match.url_name == 'home' %}dock-active{% endif %}" href="{% url 'home' %}"><span>⌂</span>Home</a>
     <a class="{% if request.resolver_match.url_name == 'book' %}dock-active{% endif %}" href="{% url 'book' %}"><span>＋</span>Book</a>
@@ -36,5 +45,6 @@
   {% endif %}
 </nav>
 {% block scripts %}{% endblock %}
+<script>if('serviceWorker' in navigator && location.protocol.startsWith('http')){window.addEventListener('load',()=>navigator.serviceWorker.register('{% url "service_worker" %}').catch(()=>{}))}</script>
 </body>
 </html>

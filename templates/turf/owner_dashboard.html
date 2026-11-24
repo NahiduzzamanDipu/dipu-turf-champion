@@ -3,53 +3,42 @@
 {% block body_class %}dashboard-body{% endblock %}
 {% block content %}
 <main class="dashboard-shell">
-  <aside class="dash-sidebar">
-    <a class="brand dash-brand" href="{% url 'owner_dashboard' %}"><span class="brand-mark">D</span><span class="brand-copy"><strong>{{ profile.name }}</strong><small>Owner workspace</small></span></a>
-    <div class="dash-nav-label">Manage</div>
-    <a class="dash-nav active" href="{% url 'owner_dashboard' %}">Bookings</a>
-    <a class="dash-nav" href="{% url 'owner_availability' %}">Availability</a>
-    <a class="dash-nav" href="{% url 'owner_settings' %}">Turf settings</a>
-    <a class="dash-nav" href="{% url 'owner_export' %}">Export bookings</a>
-    <div class="sidebar-spacer"></div>
-    <a class="dash-public" href="{% url 'home' %}">View public page <span>↗</span></a>
-    <form method="post" action="{% url 'owner_logout' %}">{% csrf_token %}<button class="dash-logout" type="submit">Sign out</button></form>
-  </aside>
+  {% include 'turf/workspace_sidebar.html' %}
   <section class="dash-content">
-    <header class="dash-top"><div><span class="dash-date">{{ today|date:'l, j F Y' }}</span><h1>Bookings</h1></div><div class="dash-top-actions"><span class="owner-avatar">{{ request.user.username|first|upper }}</span><span>{{ request.user.get_full_name|default:request.user.username }}</span><a class="button button-dark" href="{% url 'owner_availability' %}">Manage availability <span>↗</span></a></div></header>
+    <header class="dash-top"><div><span class="dash-date">{{ today|date:'l, j F Y' }}</span><h1>Bookings</h1></div><div class="dash-top-actions"><span class="owner-avatar">{{ request.user.username|first|upper }}</span><span>{{ request.user.get_full_name|default:request.user.username }}</span><a class="button button-dark" href="{% url 'owner_manual_booking' %}">Add a booking <span>＋</span></a></div></header>
     <section class="metric-grid">
-      <article class="metric-card"><span>Today’s bookings</span><strong>{{ today_count }}</strong><small>Scheduled for today</small></article>
-      <article class="metric-card metric-primary"><span>Collected today</span><strong>৳{{ today_revenue }}</strong><small>Recorded payments</small></article>
-      <article class="metric-card"><span>Collected this month</span><strong>৳{{ month_revenue }}</strong><small>Payments received</small></article>
-      <article class="metric-card"><span>Waiting for review</span><strong>{{ pending_count }}</strong><small>Across all upcoming dates</small></article>
+      <article class="metric-card"><span>Bookings today</span><strong>{{ today_count }}</strong><small>{{ pending_count }} waiting for confirmation</small></article>
+      <article class="metric-card metric-primary"><span>Collected today</span><strong>৳{{ today_revenue }}</strong><small>Verified payments</small></article>
+      <article class="metric-card"><span>Collected this month</span><strong>৳{{ month_revenue }}</strong><small>Verified payments</small></article>
+      <article class="metric-card"><span>Payments to verify</span><strong>{{ payment_verification_count }}</strong><small>{{ customer_count }} players on file</small></article>
     </section>
-    <section class="dash-panel">
-      <div class="dash-panel-head"><div><span class="section-index">THE SCHEDULE</span><h2>Recent bookings</h2></div><a class="button button-outline" href="{% url 'owner_export' %}">Download CSV <span>↓</span></a></div>
-      <form method="get" class="booking-filters">
-        <label class="search-field"><span>⌕</span><input name="q" value="{{ query }}" placeholder="Search name, phone or reference"></label>
-        <select name="status" aria-label="Filter by status"><option value="">All statuses</option>{% for value,label in booking_statuses %}<option value="{{ value }}" {% if selected_status == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select>
-        <button class="button button-dark" type="submit">Filter</button>
-      </form>
+    <section class="dash-overview">
+      <article class="dash-panel revenue-panel"><div class="dash-panel-head"><div><span class="section-index">LAST SEVEN DAYS</span><h2>Collected payments</h2></div><a class="text-link" href="{% url 'owner_reports' %}">Open reports ↗</a></div><div class="collection-chart">{% for row in daily %}<div class="chart-day" title="{{ row.date|date:'j M' }} · ৳{{ row.revenue }}"><span class="chart-value">৳{{ row.revenue }}</span><i style="height:{{ row.bar_height }}%"></i><small>{{ row.date|date:'D' }}</small></div>{% endfor %}</div></article>
+      <article class="dash-panel quick-panel"><div class="section-index">QUICK LINKS</div><h2>Run the turf</h2><div class="quick-links"><a href="{% url 'owner_availability' %}">Open the schedule <span>→</span></a><a href="{% url 'owner_customers' %}">Find a player <span>→</span></a><a href="{% url 'owner_expenses' %}">Record an expense <span>→</span></a>{% if request.user.is_staff or request.user.is_superuser or request.workspace_member.can_manage_settings %}<a href="{% url 'owner_qr' %}">Get booking QR <span>→</span></a>{% endif %}</div></article>
+    </section>
+    <section class="dash-panel booking-list-panel">
+      <div class="dash-panel-head"><div><span class="section-index">THE SCHEDULE</span><h2>Bookings and payment status</h2></div><a class="button button-outline" href="{% url 'owner_export' %}?from={{ range_start|date:'Y-m-d' }}&to={{ range_end|date:'Y-m-d' }}&format=xlsx">Export Excel <span>↓</span></a></div>
+      <form method="get" class="booking-filters"><label class="search-field"><span>⌕</span><input name="q" value="{{ query }}" placeholder="Search player, team or reference"></label><input type="date" name="from" value="{{ range_start|date:'Y-m-d' }}"><input type="date" name="to" value="{{ range_end|date:'Y-m-d' }}"><select name="status" aria-label="Filter by status"><option value="">All statuses</option>{% for value,label in booking_statuses %}<option value="{{ value }}" {% if selected_status == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select><button class="button button-dark" type="submit">Filter</button></form>
       <div class="booking-table-wrap"><table class="booking-table">
-        <thead><tr><th>Player</th><th>Game time</th><th>Reference</th><th>Total</th><th>Booking</th><th>Payment</th><th>Actions</th></tr></thead>
-        <tbody>
-        {% for booking in bookings %}
-          <tr>
-            <td data-label="Player"><strong>{{ booking.customer.name }}</strong><small>{{ booking.customer.phone }}</small></td>
-            <td data-label="Game time"><strong>{{ booking.play_date|date:'j M Y' }}</strong><small>{{ booking.start_time|time:'g:i A' }} – {{ booking.end_time|time:'g:i A' }}</small></td>
-            <td data-label="Reference"><span class="mono-ref">{{ booking.reference }}</span></td>
-            <td data-label="Total"><strong>৳{{ booking.total_amount }}</strong></td>
-            <td data-label="Booking"><span class="status-chip status-{{ booking.status }}">{{ booking.get_status_display }}</span></td>
-            <td data-label="Payment"><span class="status-chip pay-{{ booking.payment_status }}">{{ booking.get_payment_status_display }}</span><small>{% for payment in booking.payments.all %}৳{{ payment.amount }}{% if not forloop.last %}, {% endif %}{% empty %}No payments recorded{% endfor %}</small></td>
-            <td data-label="Actions"><details class="row-actions"><summary>Manage</summary><div class="action-pop">
-              <form method="post" action="{% url 'booking_action' booking.reference %}">{% csrf_token %}<label>Booking status<select name="action">{% for value,label in booking_statuses %}<option value="{{ value }}" {% if booking.status == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></label><button class="button button-dark" type="submit">Save status</button></form>
-              <form method="post" action="{% url 'booking_action' booking.reference %}">{% csrf_token %}<input type="hidden" name="action" value="record_payment"><label>Payment received<input name="amount" type="number" min="1" placeholder="Amount in BDT" required></label><label>Payment method<select name="method"><option value="cash">Cash at turf</option><option value="bkash">bKash</option><option value="nagad">Nagad</option><option value="bank">Bank transfer</option></select></label><label>Transaction reference<input name="transaction_reference" placeholder="Optional reference"></label><button class="button button-lime" type="submit">Record payment</button></form>
-            </div></details></td>
-          </tr>
-        {% empty %}<tr><td class="table-empty" colspan="7">No bookings match this view. New requests will appear here.</td></tr>{% endfor %}
-        </tbody>
-      </table></div>
+        <thead><tr><th>Player and team</th><th>Game time</th><th>Reference</th><th>Amount</th><th>Booking</th><th>Payments</th><th>Actions</th></tr></thead><tbody>
+        {% for booking in bookings %}<tr>
+          <td data-label="Player and team"><strong>{{ booking.team_name|default:booking.customer.name }}</strong><small>{{ booking.customer.name }} · {{ booking.customer.phone }}</small></td>
+          <td data-label="Game time"><strong>{{ booking.play_date|date:'j M Y' }} · {{ booking.start_time|time:'g:i A' }}</strong><small>{{ booking.field|default:'Main field' }} · {{ booking.duration_minutes }} min</small></td>
+          <td data-label="Reference"><span class="mono-ref">{{ booking.reference }}</span></td>
+          <td data-label="Amount"><strong>৳{{ booking.total_amount }}</strong><small>৳{{ booking.paid_amount }} paid · ৳{{ booking.amount_due }} due</small></td>
+          <td data-label="Booking"><span class="status-chip status-{{ booking.status }}">{{ booking.get_status_display }}</span></td>
+          <td data-label="Payments"><span class="status-chip pay-{{ booking.payment_status }}">{{ booking.get_payment_status_display }}</span><small>{% for payment in booking.payments.all %}৳{{ payment.amount }} {{ payment.get_kind_display }}{% if not payment.is_verified %} · verify{% endif %}{% if not forloop.last %}, {% endif %}{% empty %}No payment recorded{% endfor %}</small></td>
+          <td data-label="Actions"><details class="row-actions"><summary>Manage</summary><div class="action-pop">
+            <form method="post" action="{% url 'booking_action' booking.reference %}">{% csrf_token %}<label>Update booking<select name="action">{% for value,label in booking_statuses %}<option value="{{ value }}" {% if booking.status == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></label><button class="button button-dark" type="submit">Save status</button></form>
+            {% for payment in booking.payments.all %}{% if not payment.is_verified %}<form method="post" action="{% url 'booking_action' booking.reference %}">{% csrf_token %}<input type="hidden" name="action" value="verify_payment"><input type="hidden" name="payment_id" value="{{ payment.id }}"><span class="action-help">Player submitted ৳{{ payment.amount }} · {{ payment.transaction_reference }}</span><button class="button button-lime" type="submit">Verify transaction</button></form>{% endif %}{% endfor %}
+            <form method="post" action="{% url 'booking_action' booking.reference %}">{% csrf_token %}<input type="hidden" name="action" value="record_payment"><label>Payment received<input name="amount" type="number" min="1" max="{{ booking.amount_due }}" placeholder="BDT · {{ booking.amount_due }} due" required></label><label>Payment method<select name="method"><option value="cash">Cash</option><option value="bkash">bKash</option><option value="nagad">Nagad</option><option value="rocket">Rocket</option><option value="bank">Bank transfer</option></select></label><label>Transaction reference<input name="transaction_reference" placeholder="Optional reference"></label><button class="button button-lime" type="submit">Record payment</button></form>
+            {% if booking.paid_amount %}<form method="post" action="{% url 'booking_action' booking.reference %}">{% csrf_token %}<input type="hidden" name="action" value="refund"><label>Refund amount<input name="amount" type="number" min="1" max="{{ booking.paid_amount }}" placeholder="Up to ৳{{ booking.paid_amount }}" required></label><label>Reason<input name="note" placeholder="Refund note"></label><button class="button button-outline" type="submit">Record refund</button></form>{% endif %}
+            <details class="reschedule-details"><summary>Reschedule booking</summary><form method="post" action="{% url 'booking_action' booking.reference %}">{% csrf_token %}<input type="hidden" name="action" value="reschedule"><label>New start time<input type="datetime-local" name="start_at" required></label><label>Field<select name="field">{% for field in fields %}<option value="{{ field.id }}" {% if booking.field_id == field.id %}selected{% endif %}>{{ field.name }}</option>{% endfor %}</select></label><label>Slot count<input type="number" name="slot_count" value="1" min="1" max="16" required></label><button class="button button-dark" type="submit">Save new time</button></form></details>
+          </div></details></td>
+        </tr>{% empty %}<tr><td class="table-empty" colspan="7">No bookings in this date range. Try widening the dates or add a manual booking.</td></tr>{% endfor %}
+        </tbody></table></div>
     </section>
-    <footer class="dash-footer">{{ customer_count }} players in your customer list <span>·</span> Booking data stays in your workspace</footer>
+    <footer class="dash-footer">Single turf workspace <span>·</span> Booking references: DTC-XXXXXXXX</footer>
   </section>
 </main>
 {% endblock %}

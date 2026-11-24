@@ -1,0 +1,4 @@
+{% extends 'turf/base.html' %}
+{% block title %}My account · Owner workspace{% endblock %}
+{% block body_class %}dashboard-body{% endblock %}
+{% block content %}<main class="dashboard-shell">{% include 'turf/workspace_sidebar.html' %}<section class="dash-content"><header class="dash-top"><div><span class="dash-date">ACCOUNT SECURITY</span><h1>My account</h1></div></header><section class="settings-card account-card"><div class="section-index">CHANGE PASSWORD</div><h2>Keep your access secure</h2><form method="post" class="settings-form">{% csrf_token %}{% for field in form %}<label class="field-label">{{ field.label }}{{ field }}{% if field.help_text %}<small>{{ field.help_text|safe }}</small>{% endif %}{% for error in field.errors %}<small class="field-error">{{ error }}</small>{% endfor %}</label>{% endfor %}<button class="button button-lime button-large" type="submit">Update password</button></form></section></section></main>{% endblock %}

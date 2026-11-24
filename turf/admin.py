@@ -1,5 +1,10 @@
 from django.contrib import admin
-from .models import BlockedSlot, Booking, Customer, PaymentRecord, TurfProfile
+
+from .models import (
+    ActivityLog, BlockedSlot, Booking, BookingQRCode, Customer, Expense,
+    GalleryPhoto, OperatingHours, PaymentRecord, PricingRule, SpecialClosure,
+    TurfField, TurfProfile, WorkspaceMember,
+)
 
 
 class PaymentInline(admin.TabularInline):
@@ -9,9 +14,9 @@ class PaymentInline(admin.TabularInline):
 
 @admin.register(Booking)
 class BookingAdmin(admin.ModelAdmin):
-    list_display = ("reference", "customer", "play_date", "start_time", "total_amount", "status", "payment_status")
-    list_filter = ("status", "payment_status", "play_date")
-    search_fields = ("reference", "customer__name", "customer__phone")
+    list_display = ("reference", "customer", "play_date", "start_time", "field", "total_amount", "status", "payment_status")
+    list_filter = ("status", "payment_status", "play_date", "field")
+    search_fields = ("reference", "customer__name", "customer__phone", "team_name")
     inlines = (PaymentInline,)
 
 
@@ -21,5 +26,17 @@ class TurfProfileAdmin(admin.ModelAdmin):
         return not TurfProfile.objects.exists()
 
 
-admin.site.register(Customer)
-admin.site.register(BlockedSlot)
+@admin.register(PricingRule)
+class PricingRuleAdmin(admin.ModelAdmin):
+    list_display = ("label", "kind", "field", "hourly_rate", "priority", "is_active")
+    list_filter = ("kind", "is_active", "field")
+
+
+@admin.register(Expense)
+class ExpenseAdmin(admin.ModelAdmin):
+    list_display = ("date", "category", "description", "amount", "created_by")
+    list_filter = ("category", "date")
+    search_fields = ("description", "receipt_reference")
+
+
+admin.site.register([Customer, BlockedSlot, TurfField, OperatingHours, SpecialClosure, GalleryPhoto, WorkspaceMember, BookingQRCode, ActivityLog])

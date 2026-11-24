@@ -1,0 +1,25 @@
+<aside class="dash-sidebar">
+  <a class="brand dash-brand" href="{% url 'owner_dashboard' %}"><span class="brand-mark">D</span><span class="brand-copy"><strong>{{ profile.name }}</strong><small>Owner workspace</small></span></a>
+  <div class="dash-nav-label">Operations</div>
+  <a class="dash-nav {% if request.resolver_match.url_name == 'owner_dashboard' %}active{% endif %}" href="{% url 'owner_dashboard' %}">Bookings</a>
+  <a class="dash-nav {% if request.resolver_match.url_name == 'owner_manual_booking' %}active{% endif %}" href="{% url 'owner_manual_booking' %}">Add a booking</a>
+  <a class="dash-nav {% if request.resolver_match.url_name == 'owner_availability' %}active{% endif %}" href="{% url 'owner_availability' %}">Availability board</a>
+  <a class="dash-nav {% if request.resolver_match.url_name == 'owner_customers' %}active{% endif %}" href="{% url 'owner_customers' %}">Customers</a>
+  <a class="dash-nav {% if request.resolver_match.url_name == 'owner_expenses' %}active{% endif %}" href="{% url 'owner_expenses' %}">Expenses</a>
+  <a class="dash-nav {% if request.resolver_match.url_name == 'owner_reports' %}active{% endif %}" href="{% url 'owner_reports' %}">Reports</a>
+  {% if request.user.is_staff or request.user.is_superuser or request.workspace_member.can_manage_settings %}
+  <div class="dash-nav-label">Turf setup</div>
+  <a class="dash-nav {% if request.resolver_match.url_name == 'owner_settings' %}active{% endif %}" href="{% url 'owner_settings' %}">Public profile</a>
+  <a class="dash-nav {% if request.resolver_match.url_name == 'owner_fields' %}active{% endif %}" href="{% url 'owner_fields' %}">Fields</a>
+  <a class="dash-nav {% if request.resolver_match.url_name == 'owner_hours' %}active{% endif %}" href="{% url 'owner_hours' %}">Opening hours</a>
+  <a class="dash-nav {% if request.resolver_match.url_name == 'owner_pricing' %}active{% endif %}" href="{% url 'owner_pricing' %}">Pricing rules</a>
+  <a class="dash-nav {% if request.resolver_match.url_name == 'owner_gallery' %}active{% endif %}" href="{% url 'owner_gallery' %}">Pictures</a>
+  <a class="dash-nav {% if request.resolver_match.url_name == 'owner_qr' %}active{% endif %}" href="{% url 'owner_qr' %}">Booking QR</a>
+  {% if request.user.is_staff or request.user.is_superuser %}<a class="dash-nav {% if request.resolver_match.url_name == 'owner_managers' %}active{% endif %}" href="{% url 'owner_managers' %}">Managers</a>{% endif %}
+  <a class="dash-nav {% if request.resolver_match.url_name == 'owner_activity' %}active{% endif %}" href="{% url 'owner_activity' %}">Activity log</a>
+  {% endif %}
+  <div class="sidebar-spacer"></div>
+  <a class="dash-public" href="{% url 'home' %}">View public page <span>↗</span></a>
+  <a class="dash-public" href="{% url 'owner_account' %}">My account</a>
+  <form method="post" action="{% url 'owner_logout' %}">{% csrf_token %}<button class="dash-logout" type="submit">Sign out</button></form>
+</aside>
