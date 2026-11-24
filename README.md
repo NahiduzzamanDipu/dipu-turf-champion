@@ -51,3 +51,5 @@ Before accepting bookings, update the turf name, contact information, address, f
 ## Deployment
 
 The repository includes a Dockerfile and Render Blueprint. Set `DJANGO_DEBUG=False`, a private `DJANGO_SECRET_KEY`, `DJANGO_ALLOWED_HOSTS`, `CSRF_TRUSTED_ORIGINS`, and the MySQL connection variables in the host environment. Configure persistent storage for `MEDIA_ROOT` so uploaded profile and gallery photos survive redeploys.
+
+For an initial owner account, set `OWNER_EMAIL` and a generated `OWNER_TEMP_PASSWORD` (at least 12 characters) in the host's secret environment variables. The container creates a Django superuser with the email as its username after migrations. It never resets an existing owner's password on restart; change the temporary password from **My account** after first sign-in. Keep a persistent database configured before using the free Render instance for real bookings, because its local SQLite data is not durable across redeploys.
