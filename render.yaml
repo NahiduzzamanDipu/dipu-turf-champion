@@ -17,6 +17,8 @@ services:
         sync: false
       - key: CSRF_TRUSTED_ORIGINS
         sync: false
+      - key: DATABASE_URL
+        sync: false
       - key: MYSQL_DATABASE
         sync: false
       - key: MYSQL_USER

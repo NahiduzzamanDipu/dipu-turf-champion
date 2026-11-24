@@ -17,6 +17,7 @@
   <link rel="stylesheet" href="{% static 'turf/site.css' %}">
   <link rel="stylesheet" href="{% static 'turf/workspace.css' %}">
   {% block head %}{% endblock %}
+  <link rel="stylesheet" href="{% static 'turf/craft.css' %}">
 </head>
 <body class="{% block body_class %}{% endblock %}">
 <header class="topbar">
@@ -34,14 +35,14 @@
 <footer class="site-footer"><a class="brand footer-brand" href="{% url 'home' %}"><span class="brand-mark">{% if profile.profile_picture %}<img src="{{ profile.profile_picture.url }}" alt="">{% else %}D{% endif %}</span><span class="brand-copy"><strong>{{ profile.name|default:'Dipu Turf Champion' }}</strong><small>Football starts here</small></span></a><span>{{ profile.address }}</span><a href="{% url 'booking_lookup' %}">Manage your booking</a><span>© {% now "Y" %} Dipu Turf Champion</span></footer>
 <nav class="mobile-dock" aria-label="Quick navigation">
   {% if request.workspace_member or request.user.is_staff or request.user.is_superuser %}
-    <a class="{% if request.resolver_match.url_name == 'owner_dashboard' %}dock-active{% endif %}" href="{% url 'owner_dashboard' %}"><span>▤</span>Bookings</a>
-    <a class="{% if request.resolver_match.url_name == 'owner_availability' %}dock-active{% endif %}" href="{% url 'owner_availability' %}"><span>◷</span>Schedule</a>
-    <a class="{% if request.resolver_match.url_name == 'owner_reports' %}dock-active{% endif %}" href="{% url 'owner_reports' %}"><span>↗</span>Reports</a>
-    <a class="{% if request.resolver_match.url_name == 'owner_settings' %}dock-active{% endif %}" href="{% url 'owner_settings' %}"><span>•••</span>More</a>
+    <a class="{% if request.resolver_match.url_name == 'owner_dashboard' %}dock-active{% endif %}" href="{% url 'owner_dashboard' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>Bookings</a>
+    <a class="{% if request.resolver_match.url_name == 'owner_availability' %}dock-active{% endif %}" href="{% url 'owner_availability' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="16" rx="2"/><path d="M8 3v4m8-4v4M4 10h16m-8 3v4l2.5 1"/></svg>Schedule</a>
+    <a class="{% if request.resolver_match.url_name == 'owner_reports' %}dock-active{% endif %}" href="{% url 'owner_reports' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19V5m0 14h16M8 15l3-4 3 2 5-7"/></svg>Reports</a>
+    <a class="{% if request.resolver_match.url_name == 'owner_account' or request.resolver_match.url_name == 'owner_settings' %}dock-active{% endif %}" href="{% url 'owner_account' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.5"/><path d="M5 20a7 7 0 0 1 14 0"/></svg>Account</a>
   {% else %}
-    <a class="{% if request.resolver_match.url_name == 'home' %}dock-active{% endif %}" href="{% url 'home' %}"><span>⌂</span>Home</a>
-    <a class="{% if request.resolver_match.url_name == 'book' %}dock-active{% endif %}" href="{% url 'book' %}"><span>＋</span>Book</a>
-    <a class="{% if request.resolver_match.url_name == 'booking_lookup' %}dock-active{% endif %}" href="{% url 'booking_lookup' %}"><span>▤</span>My booking</a>
+    <a class="{% if request.resolver_match.url_name == 'home' %}dock-active{% endif %}" href="{% url 'home' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 11 9-7 9 7M5.5 10v10h13V10M9 20v-6h6v6"/></svg>Home</a>
+    <a class="{% if request.resolver_match.url_name == 'book' %}dock-active{% endif %}" href="{% url 'book' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v10m-5-5h10"/></svg>Book</a>
+    <a class="{% if request.resolver_match.url_name == 'booking_lookup' %}dock-active{% endif %}" href="{% url 'booking_lookup' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 8h8M8 12h8M8 16h4"/></svg>My booking</a>
   {% endif %}
 </nav>
 {% block scripts %}{% endblock %}

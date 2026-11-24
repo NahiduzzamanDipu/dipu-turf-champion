@@ -2,6 +2,7 @@ from datetime import date, datetime, timedelta
 
 from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth import get_user_model
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.db import transaction
 from django.shortcuts import redirect, render
@@ -128,7 +129,12 @@ def owner_login(request):
     if request.user.is_authenticated and _is_workspace_user(request.user):
         return redirect("owner_dashboard")
     if request.method == "POST":
-        user = authenticate(request, username=request.POST.get("username", ""), password=request.POST.get("password", ""))
+        username = request.POST.get("username", "").strip()
+        if "@" in username:
+            account = get_user_model().objects.filter(email__iexact=username).only("username").first()
+            if account:
+                username = account.username
+        user = authenticate(request, username=username, password=request.POST.get("password", ""))
         if user and _is_workspace_user(user):
             login(request, user)
             return redirect("owner_dashboard")

@@ -4,5 +4,6 @@ Pillow>=11.2,<13.0
 openpyxl>=3.1.5,<4.0
 segno>=1.6.6,<2.0
 python-dotenv>=1.1,<2.0
+dj-database-url>=2.3,<3.0
 whitenoise>=6.9,<7.0
 gunicorn>=23.0,<24.0

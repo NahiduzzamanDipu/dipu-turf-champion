@@ -1,6 +1,7 @@
 import os
 from pathlib import Path
 from dotenv import load_dotenv
+import dj_database_url
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BASE_DIR / ".env")
@@ -50,7 +51,15 @@ TEMPLATES = [{
 }]
 WSGI_APPLICATION = "config.wsgi.application"
 
-if os.getenv("MYSQL_DATABASE"):
+if os.getenv("DATABASE_URL"):
+    DATABASES = {
+        "default": dj_database_url.parse(
+            os.environ["DATABASE_URL"],
+            conn_max_age=60,
+            conn_health_checks=True,
+        )
+    }
+elif os.getenv("MYSQL_DATABASE"):
     DATABASES = {"default": {
         "ENGINE": "django.db.backends.mysql",
         "NAME": os.getenv("MYSQL_DATABASE"),
@@ -62,7 +71,7 @@ if os.getenv("MYSQL_DATABASE"):
         "CONN_MAX_AGE": 60,
     }}
 else:
-    # SQLite keeps a fresh checkout easy to explore; set MYSQL_DATABASE to use MySQL.
+    # SQLite keeps a fresh checkout easy to explore; use DATABASE_URL or MYSQL_* for MySQL.
     DATABASES = {"default": {"ENGINE": "django.db.backends.sqlite3", "NAME": BASE_DIR / "db.sqlite3"}}
 
 AUTH_PASSWORD_VALIDATORS = [
