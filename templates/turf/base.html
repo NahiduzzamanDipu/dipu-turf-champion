@@ -37,8 +37,20 @@
   {% if request.workspace_member or request.user.is_staff or request.user.is_superuser %}
     <a class="{% if request.resolver_match.url_name == 'owner_dashboard' %}dock-active{% endif %}" href="{% url 'owner_dashboard' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>Bookings</a>
     <a class="{% if request.resolver_match.url_name == 'owner_availability' %}dock-active{% endif %}" href="{% url 'owner_availability' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="16" rx="2"/><path d="M8 3v4m8-4v4M4 10h16m-8 3v4l2.5 1"/></svg>Schedule</a>
-    <a class="{% if request.resolver_match.url_name == 'owner_reports' %}dock-active{% endif %}" href="{% url 'owner_reports' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19V5m0 14h16M8 15l3-4 3 2 5-7"/></svg>Reports</a>
-    <a class="{% if request.resolver_match.url_name == 'owner_account' or request.resolver_match.url_name == 'owner_settings' %}dock-active{% endif %}" href="{% url 'owner_account' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.5"/><path d="M5 20a7 7 0 0 1 14 0"/></svg>Account</a>
+    <a class="dock-create" href="{% url 'owner_manual_booking' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v10m-5-5h10"/></svg><span>Add booking</span></a>
+    <details class="dock-more {% if request.resolver_match.url_name != 'owner_dashboard' and request.resolver_match.url_name != 'owner_availability' and request.resolver_match.url_name != 'owner_manual_booking' %}dock-more-active{% endif %}">
+      <summary aria-label="More owner pages"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg>More</summary>
+      <div class="dock-more-menu">
+        <div class="dock-menu-heading">Manage your turf</div>
+        <a href="{% url 'owner_customers' %}">Players</a><a href="{% url 'owner_expenses' %}">Expenses</a><a href="{% url 'owner_reports' %}">Reports</a>
+        {% if request.user.is_staff or request.user.is_superuser or request.workspace_member.can_manage_settings %}
+          <a href="{% url 'owner_settings' %}">Public profile</a><a href="{% url 'owner_fields' %}">Fields</a><a href="{% url 'owner_hours' %}">Opening hours</a><a href="{% url 'owner_pricing' %}">Pricing</a><a href="{% url 'owner_gallery' %}">Pictures</a><a href="{% url 'owner_qr' %}">Booking QR</a><a href="{% url 'owner_activity' %}">Activity</a>
+        {% endif %}
+        {% if request.user.is_staff or request.user.is_superuser %}<a href="{% url 'owner_managers' %}">Managers</a>{% endif %}
+        <a href="{% url 'owner_account' %}">My account</a><a href="{% url 'home' %}">Public page</a>
+        <form method="post" action="{% url 'owner_logout' %}">{% csrf_token %}<button type="submit">Sign out</button></form>
+      </div>
+    </details>
   {% else %}
     <a class="{% if request.resolver_match.url_name == 'home' %}dock-active{% endif %}" href="{% url 'home' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 11 9-7 9 7M5.5 10v10h13V10M9 20v-6h6v6"/></svg>Home</a>
     <a class="{% if request.resolver_match.url_name == 'book' %}dock-active{% endif %}" href="{% url 'book' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v10m-5-5h10"/></svg>Book</a>
