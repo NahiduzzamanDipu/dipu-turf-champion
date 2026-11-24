@@ -113,7 +113,7 @@
     if (canBook) {
       const finish = slots[index + chosenCount - 1].dataset.slotEnd;
       const clock = (value) => new Date(value).toLocaleTimeString('en-BD', {hour: 'numeric', minute: '2-digit'});
-      range.textContent = `${chosenCount * minutes} min · ${clock(selected.dataset.slotStart)}–${clock(finish)}`;
+      range.textContent = `${chosenCount * minutes} min · ${clock(slots[index].dataset.slotStart)}–${clock(finish)}`;
     } else {
       range.textContent = `Choose at least ${minimum} consecutive slot${minimum === 1 ? '' : 's'}`;
     }
