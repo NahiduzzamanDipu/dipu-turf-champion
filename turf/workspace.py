@@ -242,7 +242,9 @@ def owner_manual_booking(request):
         except (ValueError, ValidationError, TurfField.DoesNotExist) as exc:
             messages.error(request, exc.messages[0] if isinstance(exc, ValidationError) else "Check the player details and slot, then try again.")
     selected_date = request.GET.get("date", timezone.localdate().isoformat())
-    field_obj = fields.filter(pk=request.GET.get("field", "")).first() or fields.first()
+    requested_field = request.GET.get("field")
+    field_obj = fields.filter(pk=int(requested_field)).first() if requested_field and requested_field.isdecimal() else None
+    field_obj = field_obj or fields.first()
     try:
         slot_date = date.fromisoformat(selected_date)
     except ValueError:
@@ -260,7 +262,9 @@ def owner_manual_booking(request):
 def owner_availability(request):
     profile = TurfProfile.current()
     fields = TurfField.objects.filter(is_active=True)
-    field_obj = fields.filter(pk=request.GET.get("field", request.POST.get("field", ""))).first() or fields.first()
+    requested_field = request.GET.get("field") or request.POST.get("field")
+    field_obj = fields.filter(pk=int(requested_field)).first() if requested_field and requested_field.isdecimal() else None
+    field_obj = field_obj or fields.first()
     selected_date = timezone.localdate()
     if request.GET.get("date"):
         try:

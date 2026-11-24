@@ -1,40 +1,127 @@
 {% extends 'turf/base.html' %}
+{% load static %}
 {% block title %}Book a field · {{ profile.name }}{% endblock %}
+{% block head %}<link rel="stylesheet" href="{% static 'turf/booking.css' %}">{% endblock %}
 {% block content %}
-<main class="page-shell booking-page">
-  <div class="page-heading"><div><div class="section-index">BOOK YOUR GAME</div><h1>Pick your <em>time</em></h1><p>Choose a field, a day, and a continuous run of open slots.</p></div><a class="back-link" href="{% url 'home' %}">← Back to ground</a></div>
-  <form method="get" class="date-picker"><label for="booking-date">Game details</label><div class="date-control"><select name="field" aria-label="Choose a field">{% for field in fields %}<option value="{{ field.id }}" {% if selected_field.id == field.id %}selected{% endif %}>{{ field.name }} · {{ field.size|default:'Football' }}</option>{% endfor %}</select><input id="booking-date" type="date" name="date" min="{{ min_date }}" value="{{ selected_date|date:'Y-m-d' }}"><button class="button button-dark" type="submit">Show times <span>→</span></button></div></form>
-  {% if profile.public_booking_enabled %}
-  <form method="post" class="booking-layout">{% csrf_token %}<input type="hidden" name="field" value="{{ selected_field.id }}">
-    <section class="slot-panel"><div class="panel-heading"><div><div class="section-index">{{ selected_field.name|default:'AVAILABLE TIMES' }}</div><h2>{{ selected_date|date:'l, j F' }}</h2></div><span class="availability-pill"><i></i> Live availability</span></div><div class="slot-grid">
-      {% for slot in slots %}<label class="slot-option {% if not slot.available %}slot-disabled{% endif %}" data-slot-start="{{ slot.start_at }}" data-slot-end="{{ slot.end_at }}" data-slot-price="{{ slot.price }}" data-slot-open="{% if slot.available %}1{% else %}0{% endif %}"><input type="radio" name="start_at" value="{{ slot.start_at }}" {% if not slot.available %}disabled{% endif %} required><span class="slot-time">{{ slot.start|time:'g:i A' }}</span>{% if slot.date != selected_date %}<span class="slot-day">{{ slot.date|date:'D, j M' }}</span>{% endif %}<span class="slot-price">৳{{ slot.price }}</span><span class="slot-state">{% if slot.available %}Open · {{ selected_field.slot_granularity_minutes }} min{% else %}{% if slot.booking %}{{ slot.booking.team_name|default:slot.booking.customer.name }}{% else %}Held{% endif %}{% endif %}</span></label>{% empty %}<div class="empty-state">This field is closed or has no slots on this date.</div>{% endfor %}
-    </div><div class="quote-summary"><span>Estimated total</span><strong id="booking-estimate">Choose a time</strong><small>Final amount is confirmed with your request</small></div><p class="form-hint">You can request multiple continuous slots, including late-night games that finish after midnight.</p></section>
-    <aside class="booking-card"><div class="section-index">YOUR DETAILS</div><h2>Who’s playing?</h2><label class="field-label">Booking length<select name="slot_count" id="slot-count">{% for count in slot_count_options %}<option value="{{ count }}" {% if count == min_slot_count %}selected{% endif %}>{{ count }} slots · {{ count|add:0 }} × {{ selected_field.slot_granularity_minutes }} min</option>{% endfor %}</select></label><label class="field-label">Team name <span class="optional">Optional</span><input name="team_name" maxlength="120" placeholder="e.g. Friday Night FC"></label><div class="settings-grid"><label class="field-label">Players<input name="players" type="number" min="1" max="50" value="10"></label><label class="field-label">Your name<input name="name" autocomplete="name" maxlength="100" placeholder="Your name" required></label></div><label class="field-label">Mobile number<input name="phone" type="tel" inputmode="tel" autocomplete="tel" maxlength="32" placeholder="01XXXXXXXXX" required></label><label class="field-label">Payment method<select name="payment_method">{% for value,label in payment_methods %}<option value="{{ value }}">{{ label }}</option>{% endfor %}</select></label><div class="payment-instructions"><b>Advance payment</b><small>{{ profile.payment_details|default:'Choose pay at the turf or transfer using the turf’s payment details after your request.' }}</small><small>{{ profile.advance_percent }}% suggested advance · the owner verifies transfer references manually</small></div><label class="field-label">Transfer reference <span class="optional">If you have already paid</span><input name="transaction_reference" maxlength="100" placeholder="bKash / Nagad TrxID"></label><label class="field-label">Note for the team <span class="optional">Optional</span><textarea name="notes" rows="3" maxlength="500" placeholder="Anything we should know?"></textarea></label><button class="button button-lime button-large submit-booking" type="submit">Request this game <span>↗</span></button><p class="privacy-note">No player account needed. Keep your reference and mobile number to look up this request.</p></aside>
-  </form>
-  {% else %}<section class="settings-card booking-paused"><h2>Online booking is paused</h2><p>Call the turf to ask about open times.</p>{% if profile.phone %}<a class="button button-dark" href="tel:{{ profile.phone }}">Call {{ profile.phone }}</a>{% endif %}</section>{% endif %}
+<main class="booking-page page-shell">
+  <header class="booking-intro">
+    <a class="booking-back" href="{% url 'home' %}"><span aria-hidden="true">←</span> Ground</a>
+    <div class="booking-intro-main">
+      <span class="booking-kicker"><i></i> Reserve your pitch</span>
+      <h1>Make room for<br><em>game day</em></h1>
+      <p>Choose a field and a time. Your booking request is sent straight to the turf team.</p>
+    </div>
+    <div class="booking-assurance"><span aria-hidden="true">01</span><p><strong>Quick and simple</strong><small>No player account needed</small></p></div>
+  </header>
+
+  {% if fields %}
+    <form method="get" class="booking-filter-card" id="booking-filters">
+      <label class="booking-control booking-field-control"><span>Field</span><select name="field" aria-label="Choose a field">{% for field in fields %}<option value="{{ field.id }}" {% if selected_field.id == field.id %}selected{% endif %}>{{ field.name }}{% if field.size %} · {{ field.size }}{% endif %}</option>{% endfor %}</select></label>
+      <label class="booking-control booking-date-control"><span>Game date</span><input id="booking-date" type="date" name="date" min="{{ min_date }}" value="{{ selected_date|date:'Y-m-d' }}" required></label>
+      <button class="button button-dark booking-show-times" type="submit">Find times <span aria-hidden="true">→</span></button>
+    </form>
+
+    {% if profile.public_booking_enabled %}
+      <div class="booking-date-line"><div><span class="booking-date-label">Available times</span><h2>{{ selected_date|date:'l, j F' }}</h2></div><span class="booking-field-name"><i></i>{{ selected_field.name }}</span></div>
+      <form method="post" class="booking-layout" id="public-booking-form">
+        {% csrf_token %}
+        <input type="hidden" name="field" value="{{ selected_field.id }}">
+        <input type="hidden" name="date" value="{{ selected_date|date:'Y-m-d' }}">
+        <section class="slot-panel booking-slots-panel" aria-labelledby="slot-panel-title">
+          <div class="booking-panel-heading"><div><span class="booking-step">01</span><div><h2 id="slot-panel-title">Choose a start time</h2><p>Tap an open time to see the full price</p></div></div><span class="availability-pill"><i></i> Available</span></div>
+          <div class="booking-legend"><span><i class="legend-open"></i> Open</span><span><i class="legend-unavailable"></i> Unavailable</span></div>
+          <div class="slot-grid booking-slot-grid">
+            {% for slot in slots %}<label class="slot-option booking-slot {% if not slot.available %}slot-disabled{% endif %}" data-slot-start="{{ slot.start_at }}" data-slot-end="{{ slot.end_at }}" data-slot-price="{{ slot.price }}" data-slot-open="{% if slot.available %}1{% else %}0{% endif %}">
+              <input type="radio" name="start_at" value="{{ slot.start_at }}" aria-label="{{ slot.start|time:'g:i A' }}{% if slot.available %}, open, ৳{{ slot.price }}{% else %}, unavailable{% endif %}" {% if not slot.available %}disabled{% endif %} required>
+              <span class="slot-time">{{ slot.start|time:'g:i A' }}</span>
+              <span class="slot-price">৳{{ slot.price }}</span>
+              <span class="slot-state">{% if slot.available %}{{ selected_field.slot_granularity_minutes }} min{% else %}Unavailable{% endif %}</span>
+            </label>{% empty %}<div class="booking-empty"><span class="booking-empty-mark" aria-hidden="true">—</span><h3>No times on this date</h3><p>Try another day or choose a different field.</p><button class="button button-outline" type="button" onclick="document.getElementById('booking-date').focus()">Change date</button></div>{% endfor %}
+          </div>
+          <div class="booking-quote" aria-live="polite"><span class="booking-quote-mark" aria-hidden="true">↗</span><div><span>Estimated total</span><strong id="booking-estimate">Choose an open time</strong><small id="booking-range">Price is confirmed by the turf team</small></div></div>
+          <p class="booking-footnote">Open times update with existing bookings and maintenance holds.</p>
+        </section>
+
+        <aside class="booking-card booking-details-card" id="player-details">
+          <div class="booking-details-heading"><span class="booking-step">02</span><div><span class="booking-date-label">Your team</span><h2>Player details</h2></div></div>
+          <label class="field-label">How long would you like to play?<select name="slot_count" id="slot-count">{% for count in slot_count_options %}<option value="{{ count }}" {% if count == min_slot_count %}selected{% endif %}>{{ count }} slot{{ count|pluralize }} · {{ count|add:0 }} × {{ selected_field.slot_granularity_minutes }} min</option>{% endfor %}</select><small class="booking-field-help">At least {{ min_slot_count|add:0 }} slot{{ min_slot_count|pluralize }} required</small></label>
+          <label class="field-label">Team name <span class="optional">Optional</span><input name="team_name" maxlength="120" autocomplete="organization" placeholder="e.g. Friday Night FC"></label>
+          <div class="settings-grid booking-two-col">
+            <label class="field-label">Players<input name="players" type="number" min="1" max="50" value="10" inputmode="numeric" required></label>
+            <label class="field-label">Your name<input name="name" autocomplete="name" maxlength="100" placeholder="Your name" required></label>
+          </div>
+          <label class="field-label">Mobile number<input name="phone" type="tel" inputmode="tel" autocomplete="tel" maxlength="32" placeholder="01XXXXXXXXX" required></label>
+          <label class="field-label">Payment method<select name="payment_method" id="payment-method">{% for value,label in payment_methods %}<option value="{{ value }}">{{ label }}</option>{% endfor %}</select></label>
+          <div class="booking-payment-note"><strong>Payment details</strong><p>{{ profile.payment_details|default:'You can pay at the turf. If you choose a mobile payment method, the team will share transfer instructions after confirming your request.' }}</p><small>{{ profile.advance_percent }}% suggested advance · transfer references are verified by the owner</small></div>
+          <label class="field-label">Transfer reference <span class="optional">If already paid</span><input name="transaction_reference" maxlength="100" placeholder="bKash / Nagad reference"></label>
+          <label class="field-label">Note for the team <span class="optional">Optional</span><textarea name="notes" rows="3" maxlength="500" placeholder="Anything we should know?"></textarea></label>
+          <button class="button button-lime button-large submit-booking" id="submit-booking" type="submit" disabled>Choose a time first <span aria-hidden="true">→</span></button>
+          <p class="privacy-note">Your number and booking reference let you check this request later.</p>
+        </aside>
+      </form>
+    {% else %}
+      <section class="booking-paused"><span class="booking-step">Online booking</span><h2>Booking requests are paused</h2><p>Contact the turf team to ask about open times.</p>{% if profile.phone %}<a class="button button-dark button-large" href="tel:{{ profile.phone }}">Call {{ profile.phone }}</a>{% endif %}</section>
+    {% endif %}
+  {% else %}
+    <section class="booking-paused"><span class="booking-step">Online booking</span><h2>No active fields yet</h2><p>Please contact the turf team for availability.</p>{% if profile.phone %}<a class="button button-dark button-large" href="tel:{{ profile.phone }}">Call {{ profile.phone }}</a>{% endif %}</section>
+  {% endif %}
 </main>
 {% endblock %}
 {% block scripts %}<script>
 (() => {
+  const form = document.getElementById('public-booking-form');
+  if (!form) return;
   const estimate = document.getElementById('booking-estimate');
+  const range = document.getElementById('booking-range');
   const count = document.getElementById('slot-count');
-  if (!estimate || !count) return;
-  const slots = [...document.querySelectorAll('.slot-option')];
+  const submit = document.getElementById('submit-booking');
+  const slots = [...form.querySelectorAll('.booking-slot')];
+  const minimum = Number('{{ min_slot_count|default:1 }}');
   const minutes = Number('{{ selected_field.slot_granularity_minutes|default:60 }}');
+  const money = new Intl.NumberFormat('en-BD');
   const update = () => {
-    const selected = document.querySelector('input[name="start_at"]:checked');
-    if (!selected) { estimate.textContent = 'Choose a time'; return; }
-    const index = slots.findIndex((slot) => slot.querySelector('input') === selected);
-    const needed = Number(count.value);
-    let total = 0;
-    for (let i = 0; i < needed; i++) {
-      const slot = slots[index + i];
-      if (!slot || slot.dataset.slotOpen !== '1' || (i && slots[index+i-1].dataset.slotEnd !== slot.dataset.slotStart)) { estimate.textContent = 'Choose consecutive open times'; return; }
-      total += Number(slot.dataset.slotPrice);
+    const selected = form.querySelector('input[name="start_at"]:checked');
+    if (!selected) {
+      estimate.textContent = 'Choose an open time';
+      range.textContent = 'Price is confirmed by the turf team';
+      submit.disabled = true;
+      submit.innerHTML = 'Choose a time first <span aria-hidden="true">→</span>';
+      [...count.options].forEach((option) => { option.disabled = false; option.hidden = false; });
+      return;
     }
-    estimate.textContent = `৳${total.toLocaleString('en-BD')} · ${needed * minutes} min`;
+    const index = slots.findIndex((slot) => slot.querySelector('input') === selected);
+    let run = 0;
+    let total = 0;
+    for (let i = index; i < slots.length; i++) {
+      const slot = slots[i];
+      if (slot.dataset.slotOpen !== '1' || (i > index && slots[i - 1].dataset.slotEnd !== slot.dataset.slotStart)) break;
+      run++;
+      total += Number(slot.dataset.slotPrice || 0);
+    }
+    const current = Number(count.value);
+    [...count.options].forEach((option) => {
+      const value = Number(option.value);
+      option.disabled = value > run;
+      option.hidden = value > run;
+    });
+    if (current > run && run >= minimum) count.value = String(minimum);
+    const chosenCount = Number(count.value);
+    let chosenTotal = 0;
+    for (let i = 0; i < chosenCount; i++) chosenTotal += Number(slots[index + i]?.dataset.slotPrice || 0);
+    const canBook = run >= minimum && chosenCount <= run;
+    estimate.textContent = canBook ? `৳${money.format(chosenTotal)}` : 'Not enough open time';
+    if (canBook) {
+      const finish = slots[index + chosenCount - 1].dataset.slotEnd;
+      const clock = (value) => new Date(value).toLocaleTimeString('en-BD', {hour: 'numeric', minute: '2-digit'});
+      range.textContent = `${chosenCount * minutes} min · ${clock(selected.dataset.slotStart)}–${clock(finish)}`;
+    } else {
+      range.textContent = `Choose at least ${minimum} consecutive slot${minimum === 1 ? '' : 's'}`;
+    }
+    submit.disabled = !canBook;
+    submit.innerHTML = canBook ? 'Request this game <span aria-hidden="true">→</span>' : 'Choose another time <span aria-hidden="true">→</span>';
   };
-  document.querySelectorAll('input[name="start_at"]').forEach((input) => input.addEventListener('change', update));
+  form.querySelectorAll('input[name="start_at"]').forEach((input) => input.addEventListener('change', update));
   count.addEventListener('change', update);
+  update();
 })();
 </script>{% endblock %}

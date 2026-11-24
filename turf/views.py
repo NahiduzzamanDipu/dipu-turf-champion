@@ -27,13 +27,21 @@ def home(request):
     })
 
 
+def _selected_field(fields, requested_id):
+    if requested_id and str(requested_id).isdecimal():
+        return fields.filter(pk=int(requested_id)).first() or fields.first()
+    return fields.first()
+
+
 def book(request):
     profile = TurfProfile.current()
     fields = TurfField.objects.filter(is_active=True)
-    selected_field = fields.filter(pk=request.GET.get("field", request.POST.get("field", ""))).first() or fields.first()
+    requested_field = request.GET.get("field") or request.POST.get("field")
+    selected_field = _selected_field(fields, requested_field)
     default_date = timezone.localdate() + timedelta(days=1)
     try:
-        selected_date = date.fromisoformat(request.GET.get("date", "")) if request.GET.get("date") else default_date
+        date_value = request.GET.get("date") or request.POST.get("date")
+        selected_date = date.fromisoformat(date_value) if date_value else default_date
     except ValueError:
         selected_date = default_date
     selected_date = max(selected_date, timezone.localdate())
@@ -92,7 +100,6 @@ def book(request):
             return render(request, "turf/booking_success.html", {"profile": profile, "booking": booking})
         except (ValueError, ValidationError, TurfField.DoesNotExist, TurfProfile.DoesNotExist) as exc:
             messages.error(request, exc.messages[0] if isinstance(exc, ValidationError) else "Choose a valid date, field and time.")
-            selected_date = timezone.localdate() + timedelta(days=1)
             slots = build_slots(profile, selected_date, selected_field)
     return render(request, "turf/book.html", {
         "profile": profile, "fields": fields, "selected_field": selected_field,
