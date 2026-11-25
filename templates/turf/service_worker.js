@@ -1,8 +1,11 @@
 {% load static %}
-const CACHE = 'dipu-turf-shell-v2';
+const CACHE = 'dipu-turf-shell-v3';
 const SHELL = [
   '{% static "turf/site.css" %}',
   '{% static "turf/workspace.css" %}',
+  '{% static "turf/booking.css" %}',
+  '{% static "turf/craft.css" %}',
+  '{% static "turf/friendly.css" %}',
   '{% static "turf/icon.svg" %}',
   '{% static "turf/manifest.webmanifest" %}'
 ];

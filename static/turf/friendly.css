@@ -1,0 +1,163 @@
+/* Keep the club character while making everyday tasks easier to read and tap. */
+:root {
+  --friendly-focus: #806638;
+  --friendly-paper: #f4f1e9;
+}
+
+html { text-size-adjust: 100%; }
+body { line-height: 1.6; }
+button, .button, summary, input, select, textarea { touch-action: manipulation; }
+.button { min-height: 46px; padding-inline: 18px; font-size: 14px; }
+.button-large { min-height: 50px; }
+.field-label { font-size: 13px; line-height: 1.45; }
+.field-label input, .field-label select, .field-label textarea,
+.booking-control input, .booking-control select,
+.booking-filters input, .booking-filters select { font-size: 15px; }
+.form-hint, .booking-footnote, .privacy-note { font-size: 12px; }
+
+@media (max-width: 960px) and (min-width: 761px) {
+  .topbar { padding-inline: 20px; }
+  .brand { min-width: 0; }
+  .desktop-nav { gap: 14px; font-size: 12px; }
+  .top-actions { gap: 12px; }
+  .dash-sidebar { padding-inline: 12px; }
+  .dash-nav { padding-inline: 8px; }
+  .dash-content { padding-inline: 22px; }
+  .metric-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 760px) {
+  body { font-size: 15px; }
+  .topbar { min-height: 68px; padding-inline: 14px; gap: 8px; }
+  .brand { min-width: 0; gap: 8px; }
+  .brand-copy strong { font-size: 13px; }
+  .brand-copy small { font-size: 11px; }
+  .top-actions { gap: 0; }
+  .owner-link { display: none; }
+  .nav-book { min-height: 44px; padding-inline: 12px; font-size: 13px; white-space: nowrap; }
+
+  .hero { min-height: 650px; padding-bottom: 238px; }
+  .hero h1 { max-width: 9ch; font-size: clamp(48px, 13vw, 60px); line-height: .94; letter-spacing: -.035em; }
+  .hero-content > p { max-width: 34ch; font-size: 16px; line-height: 1.6; }
+  .hero-meta { max-width: 100%; flex-wrap: wrap; row-gap: 5px; font-size: 12px; }
+  .hero-availability { bottom: 38px; }
+  .hero-caption { bottom: 12px; font-size: 10px; }
+
+  .section-wrap, .rates-inner, .location-inner, .closing-inner { margin-inline: 18px; }
+  .intro-copy > p, .how-heading > p, .how-steps p,
+  .rates-inner > div:first-child > p,
+  .location-inner p, .location-inner a:not(.button) { font-size: 14px; }
+  .feature-list b, .how-steps h3 { font-size: 14px; }
+  .feature-list small { font-size: 12px; }
+  .text-link { font-size: 13px; }
+  .how-steps li, .how-steps li + li { padding-block: 16px; }
+  .gallery-heading p { font-size: 14px; }
+  .site-footer { font-size: 12px; }
+
+  .mobile-dock {
+    min-height: calc(72px + env(safe-area-inset-bottom));
+    padding: 8px 10px calc(8px + env(safe-area-inset-bottom));
+    justify-content: space-around;
+  }
+  .mobile-dock > a, .dock-more > summary {
+    min-height: 48px;
+    justify-content: center;
+    gap: 4px;
+    font-size: 12px;
+  }
+  .mobile-dock > a svg, .dock-more > summary svg { width: 22px; height: 22px; }
+  .mobile-dock .dock-create { min-height: 50px; font-size: 12px; }
+  .mobile-dock .dock-more-menu { bottom: calc(100% + 8px); }
+  .mobile-dock .dock-more-menu a, .mobile-dock .dock-more-menu button { min-height: 44px; font-size: 14px; }
+
+  .page-shell { padding-bottom: calc(120px + env(safe-area-inset-bottom)); }
+  .page-heading h1, .success-page h1, .lookup-page h1 { font-size: clamp(36px, 10vw, 44px); }
+  .date-picker > label { font-size: 14px; }
+  .date-control input, .date-control .button { min-height: 44px; font-size: 14px; }
+  .slot-option { min-height: 84px; padding: 12px; }
+  .slot-time { font-size: 13px; }
+  .slot-price { font-size: 16px; }
+  .slot-state { font-size: 11px; }
+  .field-label { font-size: 13px; }
+  .field-label input, .field-label select { min-height: 48px; font-size: 16px; }
+  .field-label textarea { min-height: 88px; font-size: 16px; }
+  .booking-card, .settings-card { gap: 14px; }
+  .lookup-form, .login-card form { gap: 18px; }
+  .lookup-page > p, .success-page > p, .login-card > p { font-size: 14px; line-height: 1.65; }
+  .login-card { padding: 26px 22px; }
+  .message-stack { top: calc(76px + env(safe-area-inset-top)); right: 12px; width: calc(100vw - 24px); }
+
+  .dashboard-shell { padding-bottom: calc(80px + env(safe-area-inset-bottom)); }
+  .dash-content { padding: 20px 16px 30px; }
+  .dash-top h1 { font-size: 32px; }
+  .dash-date { font-size: 12px; }
+  .dash-top-actions { max-width: 48%; }
+  .dash-top-actions > span:not(.owner-avatar) { display: none; }
+  .metric-card { min-height: 104px; padding: 14px; }
+  .metric-card > span { font-size: 12px; }
+  .metric-card strong { font-size: 28px; }
+  .metric-card small { font-size: 11px; line-height: 1.4; }
+  .dash-panel-head { gap: 10px; }
+  .dash-panel-head h2, .dash-panel h2, .settings-card h2 { font-size: 22px; line-height: 1.2; }
+  .dash-panel-head .button { min-height: 42px; font-size: 12px; }
+  .booking-filters { gap: 8px; }
+  .booking-filters input, .booking-filters select, .booking-filters > .button { min-height: 44px; font-size: 13px; }
+  .search-field input { min-height: 42px; font-size: 15px; }
+  .booking-table tr { gap: 12px 10px; padding-block: 17px; }
+  .booking-table td::before { font-size: 11px; }
+  .booking-table td > strong, .booking-table .mono-ref { font-size: 13px; line-height: 1.35; }
+  .booking-table td > small { font-size: 11px; line-height: 1.45; overflow-wrap: anywhere; }
+  .booking-table .status-chip { min-height: 26px; align-items: center; padding-inline: 9px; font-size: 11px; }
+  .row-actions summary { min-height: 40px; display: inline-flex; align-items: center; padding-inline: 12px; font-size: 12px; }
+  .action-pop { bottom: calc(84px + env(safe-area-inset-bottom)); }
+  .action-pop label { font-size: 12px; }
+  .action-pop select, .action-pop input { min-height: 44px; height: auto; font-size: 15px; }
+  .action-pop .button { min-height: 44px; font-size: 13px; }
+  .settings-grid, .settings-grid-small { gap: 14px 12px; }
+  .settings-card-head > p, .settings-card-head > span { font-size: 12px; line-height: 1.5; }
+  .settings-actions { flex-wrap: wrap; }
+  .dash-footer { padding-bottom: 10px; font-size: 11px; }
+
+  .booking-page { padding: 28px 16px calc(128px + env(safe-area-inset-bottom)); }
+  .booking-intro h1 { font-size: clamp(42px, 11vw, 52px); line-height: .98; }
+  .booking-intro-main > p { font-size: 14px; }
+  .booking-filter-card { gap: 12px; padding: 14px; }
+  .booking-control > span { font-size: 12px; }
+  .booking-control input, .booking-control select { min-height: 48px; font-size: 16px; }
+  .booking-show-times { min-height: 48px; font-size: 14px; }
+  .booking-panel-heading h2, .booking-details-heading h2 { font-size: 18px; }
+  .booking-panel-heading p { font-size: 13px; }
+  .booking-slot { min-height: 88px; padding: 12px; }
+  .booking-slot .slot-time { font-size: 14px; }
+  .booking-slot .slot-price { font-size: 17px; }
+  .booking-slot .slot-state { font-size: 11px; }
+  .booking-details-card .field-label { font-size: 13px; }
+  .booking-details-card .field-label input, .booking-details-card .field-label select,
+  .booking-details-card .field-label textarea { font-size: 16px; }
+  .booking-payment-note p, .booking-payment-note small, .booking-field-help { font-size: 12px; }
+  .booking-details-card .submit-booking { min-height: 52px; font-size: 14px; }
+}
+
+@media (max-width: 390px) {
+  .topbar { padding-inline: 10px; }
+  .brand-copy strong { max-width: 164px; font-size: 12px; }
+  .nav-book { padding-inline: 10px; font-size: 12px; }
+  .hero { min-height: 640px; padding-inline: 16px; }
+  .hero-buttons .button { min-height: 46px; padding-inline: 13px; font-size: 12px; }
+  .hero-availability { left: 14px; right: 14px; }
+  .mobile-dock { padding-inline: 6px; }
+  .mobile-dock > a, .dock-more > summary { font-size: 11px; }
+  .mobile-dock .dock-create { min-width: 78px; font-size: 11px; }
+  .dash-content { padding-inline: 12px; }
+  .metric-grid { gap: 8px; }
+  .metric-card { padding: 12px; }
+  .booking-table tr { grid-template-columns: 1fr 1fr; }
+  .settings-grid, .settings-grid-small { grid-template-columns: 1fr 1fr; }
+  .booking-page { padding-inline: 12px; }
+  .booking-slots-panel { padding-inline: 12px; }
+  .booking-slot { padding-inline: 9px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+}
